@@ -1,0 +1,2 @@
+class ExportedExists(Exception):
+    pass

@@ -1,0 +1,15 @@
+seed: 101
+
+data_loader_class: dataset.dataset_echonet.EchoNetDataset # Required
+model_class: model.baseline_unet.UNetBaseline # Required
+preprocessor_class: model.pre_processing.PreProcessor # Required
+augmentor_class: model.post_processing.PostProcessor # Required
+
+dataset_dir: "EchoNet_Dynamic_v1" # Required, fetch dataset using its unique identifier from ``dataset``
+training_time_metrics: ["dice_coef", "iou", "acc"]
+
+export:
+  metric: "val_loss"
+  mode: "min"
+
+run_name: 'baseline-0'

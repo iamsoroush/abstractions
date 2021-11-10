@@ -1,0 +1,53 @@
+# Global
+seed: 101
+dataset_dir: "EchoNet_Dynamic_v1" # Required, fetch dataset using its unique identifier from ``dataset``
+model_input_height: 128 # For resizing and model creation
+model_input_width: 128 # For resizing and model creation
+# n_channels must be set in code based on dataset and task
+
+# Classes
+data_loader_class: dataset.dataset_echonet.EchoNetDataset # Required
+model_class: model.baseline_unet.UNetBaseline # Required
+preprocessor_class: model.pre_processing.PreProcessor # Required
+augmentor_class: model.post_processing.PostProcessor # Required
+
+# Epochs
+epochs: 30
+
+# Parameters for instantiating DataLoader
+data_loader:
+  batch_size: 8
+  shuffle: True # on training data
+
+# Parameters for instantiating Model
+model:
+  name: "baseline-unet"
+  optimizer:
+    type: "adam"
+    initial_lr: 0.0001
+  loss_type: "binary_crossentropy"
+
+# Parameters for instantiating Preprocessor
+preprocess:
+  normalization_type: null
+
+# Parameters for instantiating augmentation
+do_train_augmentation: True
+do_validation_augmentation: False
+augmentation:
+  rotation_proba: 0.5
+  rotation_range: 45
+  flip_proba: 0.5
+
+## Parameters for instantiating PostProcessor, this class is optional.
+#post_process:
+#  inference_threshold: 0.5
+
+# Parameters for exporting, will be used by trainer
+export:
+  metric: "val_loss"
+  mode: "min"
+
+# MLFlow
+project_name: 'echo' # will be used as mlflow's experiment_name
+run_name: 'baseline-0'
