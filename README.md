@@ -1,1 +1,1 @@
-Abstractions to be super-class of main components in Tensorflow-based projects.
+Abstractions for main components in *AIMedic*'s ``tensorflow``-based projects.
