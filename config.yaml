@@ -14,9 +14,11 @@ augmentor_class: model.post_processing.PostProcessor # Required
 # Epochs
 epochs: 30
 
+# Batch-size
+batch_size: 8
+
 # Parameters for instantiating DataLoader
 data_loader:
-  batch_size: 8
   shuffle: True # on training data
 
 # Parameters for instantiating Model

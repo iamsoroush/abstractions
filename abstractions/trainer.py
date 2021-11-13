@@ -54,7 +54,7 @@ class Trainer(BaseClass):
 
     def train(self,
               model_builder: ModelBuilderBase,
-              active_run,
+              active_run: mlflow.ActiveRun,
               train_data_gen,
               n_iter_train,
               val_data_gen,
@@ -63,7 +63,7 @@ class Trainer(BaseClass):
 
         Will try to resume training from latest checkpoint, else starts training from epoch=0.
 
-        Attributes:
+        Args:
             model_builder: will be used for generating model if no checkpoints could be find.
             active_run: ``mlflow.ActiveRun`` for logging to **mlflow**. This will be used inside a context manager.
             train_data_gen: preprocessed, augmented train data-generator.This will be the output of
@@ -135,7 +135,7 @@ class Trainer(BaseClass):
         return self.exported_dir
 
     def _get_callbacks(self, model_builder: ModelBuilderBase):
-        """Makes sure that TensorBoard and ModelCheckpoint callbacks exist in a correct way.
+        """Makes sure that TensorBoard and ModelCheckpoint callbacks exist and are correctly configured.
 
         Attributes:
             model_builder: ``ModelBuilder`` object, to get callbacks list using ``model_builder.get_callbacks``

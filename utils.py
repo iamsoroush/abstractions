@@ -14,7 +14,7 @@ def setup_mlflow(mlflow_tracking_uri, mlflow_experiment_name, base_dir: pathlib.
             run2
             ...
 
-    Attributes:
+    Args:
         mlflow_tracking_uri: ``tracking_uri`` for mlflow
         mlflow_experiment_name: ``experiment_name`` for mlflow, use the same ``experiment_name`` for all experiments
         related to the same task. This is different from the ``experiment`` concept that we use.
@@ -73,7 +73,7 @@ def load_config_file(path: pathlib.Path):
     """
     loads the json config file and returns a dictionary
 
-    Attributes:
+    Args:
         path: path to json config file
 
     Returns:

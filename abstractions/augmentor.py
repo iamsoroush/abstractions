@@ -10,46 +10,45 @@ class AugmentorBase(BaseClass):
     """
 
     @abstractmethod
-    def add_batch_augmentation(self, generator):
+    def add_augmentation(self, generator):
         """Plugs augmentation to the end of the given ``generator``/``tf.Dataset``.
 
-        Augmentation will be plugged on ``DataHandler``'s generator, just before plugging ``Preprocessor``.
+        See ``DataLoader`` for more info about the input generator.
 
-        Attributes:
-            generator: a Python generator which yields a batch of ``(x, y, sample_weights(optional))``, or
-                a ``tf.data.Dataset`` which generates a batch of ``(x, y, sample_weights(optional))``.
+        Args:
+            generator: a ``Python generator`` or ``tf.data.Dataset`` which yields a single data-point of
+             ``(x, y, sample_weight(optional))`` or ``(x, y, data_id)`` if it is ``test_data_generator``
 
-                shapes => ``x`` => a list of input images,
-                          ``y`` => a list of labels, or a list of segmentation maps for segmentation
-                          ``sample_weights`` => a list of labels, or a list of binary segmentation maps for segmentation
+             shapes => ``x`` => input image,
+                       ``y`` => label, or segmentation map for segmentation
+                       ``sample_weight`` => float (classification), or binary segmentation map (segmentation)
 
         Returns:
             A ``generator``/``tf.data.Dataset`` with augmented elements.
 
         """
 
-        pass
-
-    def add_validation_batch_augmentation(self, generator):
+    @abstractmethod
+    def add_validation_augmentation(self, generator):
         """If you have different augmentation strategy for validation.
 
         If you don't want to ``do_validation_augmentation`` or you have similar augmentation strategies for train
          and validation, just skip over-riding this method.
 
-        Attributes:
-            generator: a Python generator which yields a batch of ``(x, y, sample_weights(optional))``, or
-                a ``tf.data.Dataset`` which generates a batch of ``(x, y, sample_weights(optional))``.
+        Args:
+            generator: a ``Python generator`` or ``tf.data.Dataset`` which yields a single data-point of
+             ``(x, y, sample_weight(optional))`` or ``(x, y, data_id)`` if it is ``test_data_generator``
 
-                shapes => ``x`` => a list of input images,
-                          ``y`` => a list of labels, or a list of segmentation maps for segmentation
-                          ``sample_weights`` => a list of labels, or a list of binary segmentation maps for segmentation
+             shapes => ``x`` => input image,
+                       ``y`` => label, or segmentation map for segmentation
+                       ``sample_weight`` => float (classification), or binary segmentation map (segmentation)
 
         Returns:
             A ``generator``/``tf.data.Dataset`` with augmented elements.
 
         """
 
-        return self.add_batch_augmentation(generator)
+        return self.add_augmentation(generator)
 
     @classmethod
     def __subclasshook__(cls, c):

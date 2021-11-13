@@ -11,7 +11,6 @@ class EvaluatorBase(BaseClass):
         """Evaluates the model using ``eval_functions`` defined in ``get_eval_functions``."""
 
         test_data_gen, n_iter_test = data_loader.create_test_generator()
-
         test_data_gen = preprocessor.add_batch_preprocess(test_data_gen)
 
     @classmethod

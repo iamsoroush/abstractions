@@ -15,14 +15,16 @@ class DataLoaderBase(BaseClass):
         """Create data generator for training sub-set.
 
         This will create a ``generator``/``tf.data.Dataset`` which yields two or three components:
-         (x_batch, y_batch, sample_weights(optional))
+         (image, label, sample_weight(optional))
+
+        If you don't need ``sample_weight``, set it to ``1`` for all data-points.
 
         Design this generator in a way that is compatible with your implementation of ``Augmentor``, ``Preprocessor``
          and ``Evaluator``.
 
         Returns:
-            generator: A repeated ``generator``/``tf.data.Dataset``, which will infinitely yield batches.
-            n_iter: iterations per epoch.
+            generator: a repeated ``generator``/``tf.data.Dataset`` that generates samples infinitely.
+            train_n: number of training data-points.
 
         """
 
@@ -31,10 +33,12 @@ class DataLoaderBase(BaseClass):
         """Create data generator for validation sub-set.
 
         This will create a ``generator``/``tf.data.Dataset`` which yields two or three components:
-         (x_batch, y_batch, sample_weights(optional))
+         (image, label, sample_weight(optional))
 
         Design this generator in a way that is compatible with your implementation of ``Augmentor``, ``Preprocessor``
          and ``Evaluator``.
+
+        If you don't need ``sample_weight``, set it to ``1`` for all data-points.
 
         Make sure that the shuffling is off for validation generator.
 
@@ -42,8 +46,8 @@ class DataLoaderBase(BaseClass):
          ``Augmentor`` and set ``augmentation.do_validation_augmentation==True`` in config file.
 
         Returns:
-            generator: A repeated ``generator``/``tf.data.Dataset``, which will infinitely yield batches.
-            n_iter: iterations per epoch.
+            generator: a repeated ``generator``/``tf.data.Dataset`` that generates samples infinitely.
+            val_n: number of validation data-points.
 
         """
 
@@ -52,17 +56,15 @@ class DataLoaderBase(BaseClass):
         """Create data generator for test sub-set.
 
         This will create a ``generator``/``tf.data.Dataset`` which yields three components:
-         (x_batch, y_batch, sample_weights(optional)),
+         (image, label, data_id),
 
-        and a list of identifiers for data points in which each ``data_id`` could be anything specific that can
-          help to retrieve this data point.
+        Each ``data_id`` could be anything specific that can help to retrieve this data point.
 
-
-        You can consider to set ``data_id=row_id`` of the test subset's dataframe, if you are generating one.
+        You can consider to set ``data_id=row_id`` of the test subset's dataframe, if you are have one.
 
         Returns:
-            generator: A ``generator``/``tf.data.Dataset``.
-            n_iter: iterations per epoch
+            generator: a repeated ``generator``/``tf.data.Dataset`` that generates samples infinitely.
+            test_n: number of test data-points.
 
         """
 
