@@ -36,7 +36,7 @@ class PreprocessorBase(BaseClass):
 
         Attributes:
             generator: a ``Python generator``/``tf.data.Dataset`` which yields a single data-point
-             ``(x, y, sample_weight(optional))`` or ``(x, y, data_id)`` if it is ``test_data_generator``
+             ``(x, y, sample_weight)`` or ``(x, y, data_id)`` if it is ``test_data_generator``
 
                 shapes => ``x`` => input image,
                           ``y`` => label, or segmentation map for segmentation
@@ -61,7 +61,7 @@ class PreprocessorBase(BaseClass):
 
         Attributes:
             generator: a ``Python generator``/``tf.data.Dataset`` which yields a single data-point
-             ``(x, y, sample_weight(optional))`` or ``(x, y, data_id)`` if it is ``test_data_generator``
+             ``(x, y, sample_weight)`` or ``(x, y, data_id)`` if it is ``test_data_generator``
 
                 shapes => ``x`` => input image,
                           ``y`` => label, or segmentation map for segmentation
@@ -82,7 +82,7 @@ class PreprocessorBase(BaseClass):
 
         Args:
              generator: a ``Python generator``/``tf.data.Dataset`` which yields a single data-point
-             ``(x, y, sample_weight(optional))`` or ``(x, y, data_id)`` if it is ``test_data_generator``
+             ``(x, y, sample_weight)`` or ``(x, y, data_id)`` if it is ``test_data_generator``
 
                 shapes => ``x`` =>  (input_h, input_w, n_channels),
                           ``y`` => (n_classes, 1)(classification), or (input_h, input_w, h) for segmentation
@@ -93,13 +93,19 @@ class PreprocessorBase(BaseClass):
 
         Returns:
             batched_generator: A ``generator``/``tf.data.Dataset`` which yields a batch of data for each iteration:
-                ``(x_batch, y_batch, sample_weights(optional))`` or ``(x_batch, y_batch, data_ids)`` for test data gen.
+                ``(x_batch, y_batch, sample_weights)`` or ``(x_batch, y_batch, data_ids)`` for test data gen.
                 shapes => ``x`` => (batch_size, input_h, input_w, n_channels)
                           ``y`` => classification: (batch_size, n_classes), segmentation: (batch_size, input_h, input_w, n_classes)
                           ``sample_weights`` => (batch_size, 1)(classification), (batch_size, input_h, input_w, n_classes)(segmentation)
             n_iter: number of iterations per epoch
 
         """
+
+    def add_preprocess(self, generator, n_data_points, batch_size):
+        gen = self.add_image_preprocess(generator)
+        gen = self.add_label_preprocess(gen)
+        gen, n_iter = self.batchify(gen, n_data_points, batch_size)
+        return gen, n_iter
 
     @classmethod
     def __subclasshook__(cls, c):

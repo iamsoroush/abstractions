@@ -10,6 +10,7 @@ data_loader_class: dataset.dataset_echonet.EchoNetDataset # Required
 model_class: model.baseline_unet.UNetBaseline # Required
 preprocessor_class: model.pre_processing.PreProcessor # Required
 augmentor_class: model.post_processing.PostProcessor # Required
+evaluator_class: evaluation.Evaluator
 
 # Epochs
 epochs: 30

@@ -24,10 +24,11 @@ class Trainer(BaseClass):
         self.tensorboard_log_dir = self.run_dir.joinpath('logs')
         self.run_id_path = self.run_dir.joinpath('run_id.txt')
         self.exported_dir = self.run_dir.joinpath('exported')
+        self.exported_saved_model_path = self.exported_dir.joinpath('savedmodel')
         self.config_file_path = [i for i in self.run_dir.iterdir() if i.name.endswith('.yaml')][0]
 
     def _set_defaults(self):
-        self.epochs = 30
+        self.epochs = 10
         self.export_metric = 'val_loss'
         self.export_mode = 'min'
 
@@ -36,6 +37,7 @@ class Trainer(BaseClass):
         self.tensorboard_log_dir = self.run_dir.joinpath('logs')
         self.run_id_path = self.run_dir.joinpath('run_id.txt')
         self.exported_dir = self.run_dir.joinpath('exported')
+        self.exported_saved_model_path = self.exported_dir.joinpath('savedmodel')
         self.config_file_path = [i for i in self.run_dir.iterdir() if i.name.endswith('.yaml')][0]
 
     def __init__(self, config, run_dir):
@@ -91,7 +93,7 @@ class Trainer(BaseClass):
             self._add_config_file_to_mlflow()
 
             # Set dataset name as a tag
-            mlflow.set_tag("dataset_class", str(self.config.dataset_class))
+            mlflow.set_tag("session_type", "training")  # ['hpo', 'evaluation', 'training']
 
             mlflow.tensorflow.autolog(every_n_iter=1,
                                       log_models=False,
@@ -113,7 +115,7 @@ class Trainer(BaseClass):
                                       class_weight=model_builder.get_class_weight(),
                                       callbacks=callbacks)
 
-    def export(self):
+    def export(self) -> pathlib.Path:
         """Exports the best version of ``SavedModel``s, and config.yaml file into exported sub_directory.
 
         This method will delete all checkpoints after exporting the best one.
@@ -124,9 +126,9 @@ class Trainer(BaseClass):
 
         best_model_info = self._get_best_checkpoint()
 
-        exported_saved_model_path = self.exported_dir.joinpath('savedmodel')
+        # exported_saved_model_path = self.exported_dir.joinpath('savedmodel')
         exported_config_path = self.exported_dir.joinpath('config.yaml')
-        shutil.copytree(best_model_info['path'], exported_saved_model_path,
+        shutil.copytree(best_model_info['path'], self.exported_saved_model_path,
                         symlinks=False, ignore=None, ignore_dangling_symlinks=False)
         shutil.copy(self.config_file_path, exported_config_path)
 
@@ -262,6 +264,9 @@ class Trainer(BaseClass):
             """Returns a list of each item formatted like 'trainer.mlflow.tracking_uri: /tracking/uri' """
 
             values = []
+            if dictionary is None:
+                return values
+
             for key, value in dictionary.items():
                 if isinstance(value, dict):
                     items_list = param_extractor(value)

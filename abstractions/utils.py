@@ -5,7 +5,7 @@ import mlflow
 from mlflow.tracking import MlflowClient
 
 
-def setup_mlflow(mlflow_tracking_uri, mlflow_experiment_name, base_dir: pathlib.Path):
+def setup_mlflow(mlflow_tracking_uri, mlflow_experiment_name: str, base_dir: pathlib.Path) -> mlflow.ActiveRun:
     """Sets up mlflow and returns an ``active_run`` object.
 
     tracking_uri/
@@ -54,7 +54,7 @@ def setup_mlflow(mlflow_tracking_uri, mlflow_experiment_name, base_dir: pathlib.
     return active_run
 
 
-def check_for_config_file(run_dir: pathlib.Path):
+def check_for_config_file(run_dir: pathlib.Path) -> pathlib.Path:
     """Checks for existence of config file and returns the path to config file if exists."""
 
     if not run_dir.is_dir():
@@ -69,7 +69,16 @@ def check_for_config_file(run_dir: pathlib.Path):
     return yaml_files[0]
 
 
-def load_config_file(path: pathlib.Path):
+class Struct:
+    def __init__(self, **entries):
+        for k, v in entries.items():
+            if isinstance(v, dict):
+                self.__dict__[k] = Struct(**v)
+            else:
+                self.__dict__[k] = v
+
+
+def load_config_file(path: pathlib.Path) -> Struct:
     """
     loads the json config file and returns a dictionary
 
@@ -87,11 +96,3 @@ def load_config_file(path: pathlib.Path):
     config_obj = Struct(**data_map)
     return config_obj
 
-
-class Struct:
-    def __init__(self, **entries):
-        for k, v in entries.items():
-            if isinstance(v, dict):
-                self.__dict__[k] = Struct(**v)
-            else:
-                self.__dict__[k] = v

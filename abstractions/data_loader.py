@@ -15,7 +15,7 @@ class DataLoaderBase(BaseClass):
         """Create data generator for training sub-set.
 
         This will create a ``generator``/``tf.data.Dataset`` which yields two or three components:
-         (image, label, sample_weight(optional))
+         (image, label, sample_weight(float))
 
         If you don't need ``sample_weight``, set it to ``1`` for all data-points.
 
@@ -33,7 +33,7 @@ class DataLoaderBase(BaseClass):
         """Create data generator for validation sub-set.
 
         This will create a ``generator``/``tf.data.Dataset`` which yields two or three components:
-         (image, label, sample_weight(optional))
+         (image, label, sample_weight(float))
 
         Design this generator in a way that is compatible with your implementation of ``Augmentor``, ``Preprocessor``
          and ``Evaluator``.
@@ -56,14 +56,14 @@ class DataLoaderBase(BaseClass):
         """Create data generator for test sub-set.
 
         This will create a ``generator``/``tf.data.Dataset`` which yields three components:
-         (image, label, data_id),
+         (image, label, data_id(str)),
 
         Each ``data_id`` could be anything specific that can help to retrieve this data point.
-
         You can consider to set ``data_id=row_id`` of the test subset's dataframe, if you are have one.
+        Do not repeat this dataset, i.e. raise an exception at the end.
 
         Returns:
-            generator: a repeated ``generator``/``tf.data.Dataset`` that generates samples infinitely.
+            generator: a ``generator``/``tf.data.Dataset`` that generates samples infinitely.
             test_n: number of test data-points.
 
         """

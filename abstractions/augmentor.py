@@ -17,7 +17,7 @@ class AugmentorBase(BaseClass):
 
         Args:
             generator: a ``Python generator`` or ``tf.data.Dataset`` which yields a single data-point of
-             ``(x, y, sample_weight(optional))`` or ``(x, y, data_id)`` if it is ``test_data_generator``
+             ``(x, y, sample_weight)`` or ``(x, y, data_id)`` if it is ``test_data_generator``
 
              shapes => ``x`` => input image,
                        ``y`` => label, or segmentation map for segmentation
@@ -37,7 +37,7 @@ class AugmentorBase(BaseClass):
 
         Args:
             generator: a ``Python generator`` or ``tf.data.Dataset`` which yields a single data-point of
-             ``(x, y, sample_weight(optional))`` or ``(x, y, data_id)`` if it is ``test_data_generator``
+             ``(x, y, sample_weight)`` or ``(x, y, data_id)`` if it is ``test_data_generator``
 
              shapes => ``x`` => input image,
                        ``y`` => label, or segmentation map for segmentation
