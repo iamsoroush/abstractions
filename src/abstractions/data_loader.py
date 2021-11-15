@@ -23,7 +23,7 @@ class DataLoaderBase(BaseClass):
          and ``Evaluator``.
 
         Returns:
-            generator: a repeated ``generator``/``tf.data.Dataset`` that generates samples infinitely.
+            generator: a ``generator``/``tf.data.Dataset``.
             train_n: number of training data-points.
 
         """
@@ -46,7 +46,7 @@ class DataLoaderBase(BaseClass):
          ``Augmentor`` and set ``augmentation.do_validation_augmentation==True`` in config file.
 
         Returns:
-            generator: a repeated ``generator``/``tf.data.Dataset`` that generates samples infinitely.
+            generator: a ``generator``/``tf.data.Dataset``.
             val_n: number of validation data-points.
 
         """
@@ -63,10 +63,24 @@ class DataLoaderBase(BaseClass):
         Do not repeat this dataset, i.e. raise an exception at the end.
 
         Returns:
-            generator: a ``generator``/``tf.data.Dataset`` that generates samples infinitely.
+            generator: a ``generator``/``tf.data.Dataset``.
             test_n: number of test data-points.
 
         """
+
+    def get_validation_index(self):
+        """Returns validation index for each validation data-point.
+
+        This will be used as ``index`` of report data-frame in evaluation process.
+        Make sure that the validation generator does not shuffle, and order of this list and the validation data are
+         consistent.
+
+        Returns:
+            a list of str/int indexes.
+
+        """
+
+        return None
 
     @classmethod
     def __subclasshook__(cls, c):

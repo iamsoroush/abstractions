@@ -5,7 +5,8 @@ import mlflow
 from mlflow.tracking import MlflowClient
 
 
-def setup_mlflow(mlflow_tracking_uri, mlflow_experiment_name: str, base_dir: pathlib.Path) -> mlflow.ActiveRun:
+def setup_mlflow(mlflow_tracking_uri, mlflow_experiment_name: str,
+                 base_dir: pathlib.Path, evaluation=False) -> mlflow.ActiveRun:
     """Sets up mlflow and returns an ``active_run`` object.
 
     tracking_uri/
@@ -19,6 +20,7 @@ def setup_mlflow(mlflow_tracking_uri, mlflow_experiment_name: str, base_dir: pat
         mlflow_experiment_name: ``experiment_name`` for mlflow, use the same ``experiment_name`` for all experiments
         related to the same task. This is different from the ``experiment`` concept that we use.
         base_dir: directory for your experiment, containing your `config.yaml` file.
+        evaluation: if evaluation==true, then new run will be created, named ``base_dir.name + _evaluation``
 
     Returns:
         active_run: an ``active_run`` object to use for mlflow logging.
@@ -26,14 +28,14 @@ def setup_mlflow(mlflow_tracking_uri, mlflow_experiment_name: str, base_dir: pat
     """
 
     # Loads run_id if exists
+    run_id = None
     run_id_path = base_dir.joinpath('run_id.txt')
     run_name = base_dir.name
-
-    if run_id_path.exists():
+    if evaluation:
+        run_name += '_evaluation'
+    elif run_id_path.exists():
         with open(run_id_path, 'r') as f:
             run_id = f.readline()
-    else:
-        run_id = None
 
     mlflow.set_tracking_uri(mlflow_tracking_uri)
     client = MlflowClient(mlflow_tracking_uri)
