@@ -22,7 +22,7 @@ batch_size: 8
 data_loader:
   shuffle: True # on training data
 
-# Parameters for instantiating Model
+# Parameters for model-builder
 model:
   name: "baseline-unet"
   optimizer:

@@ -2,10 +2,11 @@ import pathlib
 import argparse
 from pydoc import locate
 
+import mlflow
 import tensorflow.keras as tfk
 
-from abstractions import *
-from abstractions.utils import load_config_file, check_for_config_file, setup_mlflow
+from src.abstractions import *
+from src.abstractions.utils import load_config_file, check_for_config_file, setup_mlflow
 
 MLFLOW_TRACKING_URI = 'mlruns'
 
@@ -30,7 +31,6 @@ class ConfigParamDoesNotExist(Exception):
 
 
 def get_class_paths(config_file):
-
     try:
         model_class_path = config_file.model_class
     except AttributeError:
@@ -71,7 +71,9 @@ if __name__ == '__main__':
     config_path = check_for_config_file(run_dir)
     config_file = load_config_file(config_path.absolute())
 
-    model_class_path, preprocessor_class_path, data_loader_class_path, augmentor_class_path, evaluator_class_path = get_class_paths(config_file)
+    model_class_path, preprocessor_class_path, data_loader_class_path, \
+    augmentor_class_path, evaluator_class_path = get_class_paths(
+        config_file)
 
     # Dataset
     data_loader_class = locate(data_loader_class_path)
@@ -126,13 +128,26 @@ if __name__ == '__main__':
     # Evaluate on evaluation data
     exported_model = tfk.models.load_model(trainer.exported_saved_model_path)
 
+    mlflow.end_run()
+    eval_active_run = setup_mlflow(mlflow_tracking_uri=MLFLOW_TRACKING_URI,
+                                   mlflow_experiment_name=config_file.project_name,
+                                   base_dir=run_dir,
+                                   evaluation=True)
+
     evaluator_class = locate(evaluator_class_path)
     evaluator = evaluator_class(config_file)
     assert isinstance(evaluator, EvaluatorBase)
-    evaluator.evaluate(data_loader=data_loader,
-                       preprocessor=preprocessor,
-                       exported_model=exported_model)
+    eval_report = evaluator.evaluate(data_loader=data_loader,
+                                     preprocessor=preprocessor,
+                                     exported_model=exported_model,
+                                     active_run=eval_active_run)
 
     # Evaluate on validation data
-
+    val_index = data_loader.get_validation_index()
+    eval_report_validation = evaluator.validation_evaluate(data_loader=data_loader,
+                                                           preprocessor=preprocessor,
+                                                           exported_model=exported_model,
+                                                           active_run=eval_active_run,
+                                                           index=val_index)
+    eval_report_validation.to_csv(run_dir.joinpath("validation_report.csv"))
 

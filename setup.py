@@ -14,8 +14,8 @@ setup(
             "Programming Language :: Python :: 3",
             "Operating System :: OS Independent",
         ],
-    # package_dir={"": "abstractions"},
-    # packages=find_packages(where="abstractions"),
-    packages=['abstractions'],
+    package_dir={"": "src"},
+    packages=find_packages(where="src"),
+    # packages=['abstractions'],
     python_requires=">=3.6"
 )
