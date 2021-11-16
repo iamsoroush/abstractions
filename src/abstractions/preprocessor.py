@@ -133,7 +133,6 @@ class PreprocessorBase(BaseClass):
 
         """
 
-
         gen = self.add_image_preprocess(generator)
         gen = self.add_label_preprocess(gen)
         gen, n_iter = self.batchify(gen, n_data_points, batch_size)
