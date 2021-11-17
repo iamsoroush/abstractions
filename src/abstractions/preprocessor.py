@@ -48,7 +48,7 @@ class PreprocessorBase(BaseClass):
         Note that you have to use exactly the same logic that you define in ``self.image_preprocess`` method. Consider
          using ``map`` method for ``tf.data.Dataset``, or {``map``function/``for`` loop} for vanilla ``Python generator``.
 
-        Attributes:
+        Args:
             generator: a ``Python generator``/``tf.data.Dataset`` which yields a single data-point
              ``(x, y, sample_weight)`` or ``(x, y, data_id)`` if it is ``test/val_data_generator``
 
@@ -71,7 +71,7 @@ class PreprocessorBase(BaseClass):
         Note that you have to use exactly the same logic that you define in ``self.label_preprocess`` method. Consider
          using ``map`` method for ``tf.data.Dataset``, or {``map``function/``for`` loop} for vanilla ``Python generator``.
 
-        Attributes:
+        Args:
             generator: a ``Python generator``/``tf.data.Dataset`` which yields a single data-point
              ``(x, y, sample_weight)`` or ``(x, y, data_id)`` if it is ``test/val_data_generator``
 

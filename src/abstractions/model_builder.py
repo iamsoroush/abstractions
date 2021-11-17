@@ -15,7 +15,6 @@ class ModelBuilderBase(BaseClass):
 
         pass
 
-    @abstractmethod
     def get_callbacks(self):
         """Returns any callbacks for ``fit``.
 
@@ -26,7 +25,6 @@ class ModelBuilderBase(BaseClass):
         """
         return list()
 
-    @abstractmethod
     def get_class_weight(self):
         """Set this if you want to pass ``class_weight`` to ``fit``.
 

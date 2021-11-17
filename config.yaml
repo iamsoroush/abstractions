@@ -23,7 +23,7 @@ data_loader:
   shuffle: True # on training data
 
 # Parameters for model-builder
-model:
+model_builder:
   name: "baseline-unet"
   optimizer:
     type: "adam"

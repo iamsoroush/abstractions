@@ -49,7 +49,8 @@ def get_class_paths(config_file):
     try:
         augmentor_class_path = config_file.augmentor_class
     except AttributeError:
-        raise ConfigParamDoesNotExist('could not find augmentor_class in config file.')
+        print('could not find augmentor_class in config file.')
+        augmentor_class_path = None
 
     try:
         evaluator_class_path = config_file.evaluator_class
@@ -81,13 +82,14 @@ if __name__ == '__main__':
     # validation_n_iter = data_res['n_iter']
 
     # Augmentor
-    augmentor_class = locate(augmentor_class_path)
-    augmentor = augmentor_class(config_file)
-    assert isinstance(augmentor, AugmentorBase)
-    if config_file.do_train_augmentation:
-        train_data_gen = augmentor.add_augmentation(train_data_gen)
-    if config_file.do_validation_augmentation:
-        validation_data_gen = augmentor.add_augmentation(validation_data_gen)
+    if augmentor_class_path is not None:
+        augmentor_class = locate(augmentor_class_path)
+        augmentor = augmentor_class(config_file)
+        assert isinstance(augmentor, AugmentorBase)
+        if config_file.do_train_augmentation:
+            train_data_gen = augmentor.add_augmentation(train_data_gen)
+        if config_file.do_validation_augmentation:
+            validation_data_gen = augmentor.add_augmentation(validation_data_gen)
 
     # Preprocessor
     preprocessor_class = locate(preprocessor_class_path)
