@@ -8,7 +8,7 @@ import tensorflow.keras as tfk
 from src.abstractions import *
 from src.abstractions.utils import load_config_file, check_for_config_file, setup_mlflow
 
-MLFLOW_TRACKING_URI = 'mlruns'
+MLFLOW_TRACKING_URI = '/home/vafaeisa/mlruns'
 
 
 def parse_args():
@@ -18,10 +18,10 @@ def parse_args():
                         type=str,
                         help='directory of the config file',
                         required=True)
-    parser.add_argument('--dataset_dir',
-                        type=str,
-                        help='directory of the dataset',
-                        required=True)
+    # parser.add_argument('--dataset_dir',
+    #                     type=str,
+    #                     help='directory of the dataset',
+    #                     required=True)
 
     return parser.parse_args()
 
@@ -74,10 +74,10 @@ if __name__ == '__main__':
     data_loader_class = locate(data_loader_class_path)
     data_loader = data_loader_class(config_file)
     assert isinstance(data_loader, DataLoaderBase)
-    train_data_gen, n_iter_train = data_loader.create_training_generator()
+    train_data_gen, train_n = data_loader.create_training_generator()
     # train_data_gen = data_res['data_gen']
     # train_n_iter = data_res['n_iter']
-    validation_data_gen, n_iter_val = data_loader.create_validation_generator()
+    validation_data_gen, validation_n = data_loader.create_validation_generator()
     # validation_data_gen = data_res['data_gen']
     # validation_n_iter = data_res['n_iter']
 
@@ -95,8 +95,8 @@ if __name__ == '__main__':
     preprocessor_class = locate(preprocessor_class_path)
     preprocessor = preprocessor_class(config_file)
     assert isinstance(preprocessor, PreprocessorBase)
-    train_data_gen = preprocessor.add_preprocess(train_data_gen)
-    validation_data_gen = preprocessor.add_preprocess(validation_data_gen)
+    train_data_gen, n_iter_train = preprocessor.add_preprocess(train_data_gen, train_n, config_file.batch_size)
+    validation_data_gen, n_iter_val = preprocessor.add_preprocess(validation_data_gen, validation_n, config_file.batch_size)
 
     # Model
     model_class = locate(model_class_path)
