@@ -9,6 +9,7 @@ import typing
 import numpy as np
 import pandas as pd
 import tensorflow.keras as tfk
+import tensorflow as tf
 
 from .base_class import BaseClass
 from .data_loader import DataLoaderBase
@@ -91,7 +92,8 @@ class EvaluatorBase(BaseClass):
 
         return report_df
 
-    def _wrap_pred_step(self, model):
+    @staticmethod
+    def _wrap_pred_step(model):
         """Overrides the ``predict`` method of model.
 
         By calling ``predict`` method of the model, three lists will be returned:
@@ -104,7 +106,8 @@ class EvaluatorBase(BaseClass):
 
         setattr(model, 'predict_step', new_predict_step)
 
-    def _log_to_mlflow(self, active_run: mlflow.ActiveRun, report_df: pd.DataFrame, prefix='test'):
+    @staticmethod
+    def _log_to_mlflow(active_run: mlflow.ActiveRun, report_df: pd.DataFrame, prefix='test'):
         summary_report = report_df.describe()
 
         test_metrics = {}
@@ -113,7 +116,7 @@ class EvaluatorBase(BaseClass):
             metric_value = summary_report[c]['mean']
             test_metrics[metric_name] = metric_value
 
-        with active_run as run:
+        with active_run:
             mlflow.set_tag("session_type", "evaluation")
             mlflow.log_metrics(test_metrics)
 
@@ -161,16 +164,3 @@ class EvaluatorBase(BaseClass):
                  'dice': get_dice_metric(), ...}
 
         """
-
-    @classmethod
-    def __subclasshook__(cls, c):
-        """This defines the __subclasshook__ class method.
-        This special method is called by the Python interpreter to answer the question,
-         Is the class C a subclass of this class?
-        """
-
-        if cls is EvaluatorBase:
-            attrs = set(dir(c))
-            if set(cls.__abstractmethods__) <= attrs:
-                return True
-        return NotImplemented

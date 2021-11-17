@@ -81,16 +81,3 @@ class DataLoaderBase(BaseClass):
         """
 
         return None
-
-    @classmethod
-    def __subclasshook__(cls, c):
-        """This defines the __subclasshook__ class method.
-        This special method is called by the Python interpreter to answer the question,
-         Is the class C a subclass of this class?
-        """
-
-        if cls is DataLoaderBase:
-            attrs = set(dir(c))
-            if set(cls.__abstractmethods__) <= attrs:
-                return True
-        return NotImplemented
