@@ -85,7 +85,7 @@ class PreprocessorBase(BaseClass):
         """
 
     @abstractmethod
-    def batchify(self, generator, n_data_points, batch_size):
+    def batchify(self, generator, n_data_points):
         """Batchifies the input ``generator``/``tf.Dataset``
 
         This will be the latest block for data pipeline.
@@ -93,6 +93,8 @@ class PreprocessorBase(BaseClass):
          the ``batch_size`` does not fit into the ``n_data_points``.
 
         You can use ``.batch(..).repeat()`` for ``tf.data.Dataset``, or a similar process for ``Python generator``.
+
+        You can access to ``batch_size`` from ``self.config.batch_size``
 
         Args:
              generator: a ``Python generator``/``tf.data.Dataset`` which yields a single data-point
@@ -103,7 +105,6 @@ class PreprocessorBase(BaseClass):
                           ``sample_weight`` => float (classification), or one-channel segmentation map (segmentation)
 
             n_data_points: number of data_points in this sub-set.
-            batch_size: batch size
 
         Returns:
             batched_generator: A repeated ``generator``/``tf.data.Dataset`` which yields a batch of data for each iteration:
@@ -115,13 +116,12 @@ class PreprocessorBase(BaseClass):
 
         """
 
-    def add_preprocess(self, generator, n_data_points, batch_size):
+    def add_preprocess(self, generator, n_data_points):
         """Plugs preprocessing on top of given generator.
 
         Args:
             generator: see ``DataLoaderBase.create_data_generator``
             n_data_points: number of data_points in this sub-set.
-            batch_size: batch size
 
         Returns:
             batched_generator: A repeated ``generator``/``tf.data.Dataset`` which yields a batch of data for each iteration:
@@ -135,7 +135,7 @@ class PreprocessorBase(BaseClass):
 
         gen = self.add_image_preprocess(generator)
         gen = self.add_label_preprocess(gen)
-        gen, n_iter = self.batchify(gen, n_data_points, batch_size)
+        gen, n_iter = self.batchify(gen, n_data_points)
         return gen, n_iter
 
     @classmethod

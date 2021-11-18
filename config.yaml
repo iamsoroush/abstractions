@@ -1,15 +1,16 @@
 # Global
 seed: 101
-dataset_dir: "EchoNet_Dynamic_v1" # Required, fetch dataset using its unique identifier from ``dataset``
-model_input_height: 128 # For resizing and model creation
-model_input_width: 128 # For resizing and model creation
+input_height: 28 # For resizing and model creation
+input_width: 28 # For resizing and model creation
 # n_channels must be set in code based on dataset and task
 
+src_code_path: 'src' # '.' if packages are in root directory of the repository
+
 # Classes
-data_loader_class: dataset.dataset_echonet.EchoNetDataset # Required
-model_class: model.baseline_unet.UNetBaseline # Required
-preprocessor_class: model.pre_processing.PreProcessor # Required
-augmentor_class: model.post_processing.PostProcessor # Required
+data_loader_class: dataset.DataLoaderTF # Required
+model_class: models.ModelBuilder # Required
+preprocessor_class: preprocessing.PreprocessrorTF # Required
+augmentor_class: augmentation.Augmentor
 evaluator_class: evaluation.Evaluator
 
 # Epochs
@@ -31,20 +32,16 @@ model_builder:
   loss_type: "binary_crossentropy"
 
 # Parameters for instantiating Preprocessor
-preprocess:
+preprocessor:
   normalization_type: null
 
 # Parameters for instantiating augmentation
 do_train_augmentation: True
 do_validation_augmentation: False
-augmentation:
+augmentator:
   rotation_proba: 0.5
   rotation_range: 45
   flip_proba: 0.5
-
-## Parameters for instantiating PostProcessor, this class is optional.
-#post_process:
-#  inference_threshold: 0.5
 
 # Parameters for exporting, will be used by trainer
 export:
@@ -53,4 +50,3 @@ export:
 
 # MLFlow
 project_name: 'echo' # will be used as mlflow's experiment_name
-run_name: 'baseline-0'

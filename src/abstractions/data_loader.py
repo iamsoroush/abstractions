@@ -1,3 +1,4 @@
+import pathlib
 from abc import abstractmethod
 
 from .base_class import BaseClass
@@ -9,6 +10,10 @@ class DataLoaderBase(BaseClass):
     This class will create data generators. This is actually the process of ingesting data from a data source
      into lists of ``np.Array`` or ``tf.Tensor``, without any pre-processing(numerical manipulation of data)
     """
+
+    def __init__(self, config, data_dir: pathlib.Path):
+        self.data_dir = data_dir
+        super().__init__(config)
 
     @abstractmethod
     def create_training_generator(self):
