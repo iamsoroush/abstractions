@@ -90,7 +90,7 @@ class ConfigStruct:
         self.input_width = None
         self.src_code_path = None
         self.data_loader_class = None
-        self.model_class = None
+        self.model_builder_class = None
         self.preprocessor_class = None
         self.augmentor_class = None
         self.evaluator_class = None

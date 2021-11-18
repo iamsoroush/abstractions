@@ -130,9 +130,9 @@ class Orchestrator:
 
     def _get_class_paths(self):
         try:
-            model_class_path = self.config.model_class
+            model_class_path = self.config.model_builder_class
         except AttributeError:
-            raise ConfigParamDoesNotExist('could not find model_class in config file.')
+            raise ConfigParamDoesNotExist('could not find model_builder_class in config file.')
 
         try:
             preprocessor_class_path = self.config.preprocessor_class

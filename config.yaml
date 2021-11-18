@@ -4,11 +4,11 @@ input_height: 28 # For resizing and model creation
 input_width: 28 # For resizing and model creation
 # n_channels must be set in code based on dataset and task
 
-src_code_path: 'src' # '.' if packages are in root directory of the repository
+src_code_path: 'src' # put '' if packages are in root directory of your repository
 
 # Classes
 data_loader_class: dataset.DataLoaderTF # Required
-model_class: models.ModelBuilder # Required
+model_builder_class: models.ModelBuilder # Required
 preprocessor_class: preprocessing.PreprocessrorTF # Required
 augmentor_class: augmentation.Augmentor
 evaluator_class: evaluation.Evaluator
@@ -25,7 +25,6 @@ data_loader:
 
 # Parameters for model-builder
 model_builder:
-  name: "baseline-unet"
   optimizer:
     type: "adam"
     initial_lr: 0.0001

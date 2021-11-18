@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
 
+from .utils import ConfigStruct
+
 
 class BaseClass(ABC):
 
-    def __init__(self, config=None):
+    def __init__(self, config: ConfigStruct = None):
         self._set_defaults()
         self.config = config
         if config is not None:
