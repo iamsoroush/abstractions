@@ -8,7 +8,7 @@ import pyslurm
 # Make sure to clone/fetch your repository
 
 USER = os.getenv('USER')
-ORCHESTRATOR_PATH = Path('/home').joinpath(USER).joinpath('scratch').joinpath('orchestrator.py')
+ORCHESTRATOR_PATH = Path('/home').joinpath(USER).joinpath('abstractions').joinpath('orchestrator.py')
 MAX_JOBS = 10
 
 
