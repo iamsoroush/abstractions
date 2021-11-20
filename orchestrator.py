@@ -40,8 +40,13 @@ class Orchestrator:
         sys.path.append(self.src_code_path)
         self.logger.info(f'{self.src_code_path} has been added to system paths.')
 
-        self.data_loader, self.augmentor, self.preprocessor, self.model_builder,\
-        self.trainer, self.evaluator = self._instantiate_components()
+        # Instantiating components
+        self.data_loader = self._create_data_loader()
+        self.augmentor = self._create_augmentor()
+        self.preprocessor = self._create_preprocessor()
+        self.model_builder = self._create_model_builder()
+        self.trainer = self._create_trainer()
+        self.evaluator = self._create_evaluator()
 
         self.mlflow_tracking_uri = MLFLOW_TRACKING_URI
 
@@ -66,7 +71,7 @@ class Orchestrator:
         self.logger.info('added preprocessing to data-generators')
 
         # training
-        mlflow_active_run = setup_mlflow(mlflow_tracking_uri=self.mlflow_tracking_uri,
+        mlflow_active_run = setup_mlflow(mlflow_tracking_uri=str(self.mlflow_tracking_uri),
                                          mlflow_experiment_name=self.project_name,
                                          base_dir=self.run_dir)
 
@@ -86,7 +91,7 @@ class Orchestrator:
         exported_model = tfk.models.load_model(self.trainer.exported_saved_model_path)
         self.logger.info(f'loaded {self.trainer.exported_saved_model_path}')
         mlflow.end_run()
-        eval_active_run = setup_mlflow(mlflow_tracking_uri=self.mlflow_tracking_uri,
+        eval_active_run = setup_mlflow(mlflow_tracking_uri=str(self.mlflow_tracking_uri),
                                        mlflow_experiment_name=self.project_name,
                                        base_dir=self.run_dir,
                                        evaluation=True)
@@ -115,57 +120,26 @@ class Orchestrator:
         eval_report_validation.to_csv(val_report_path)
         self.logger.info(f'wrote evaluation (validation dataset) to {val_report_path}')
 
-    def _instantiate_components(self):
-        model_class_path, preprocessor_class_path, data_loader_class_path, \
-        augmentor_class_path, evaluator_class_path = self._get_class_paths()
-
-        data_loader = self._create_data_loader(data_loader_class_path)
-        augmentor = self._create_augmentor(augmentor_class_path)
-        preprocessor = self._create_preprocessor(preprocessor_class_path)
-        model_builder = self._create_model_builder(model_class_path)
-        trainer = self._create_trainer()
-        evaluator = self._create_evaluator(evaluator_class_path)
-
-        return data_loader, augmentor, preprocessor, model_builder, trainer, evaluator
-
-    def _get_class_paths(self):
+    def _create_data_loader(self):
         try:
-            model_class_path = self.config.model_builder_class
-        except AttributeError:
-            raise ConfigParamDoesNotExist('could not find model_builder_class in config file.')
-
-        try:
-            preprocessor_class_path = self.config.preprocessor_class
-        except AttributeError:
-            raise ConfigParamDoesNotExist('could not find preprocessor_class in config file.')
-
-        try:
-            data_loader_class_path = self.config.data_loader_class
+            class_path = self.config.data_loader_class
         except AttributeError:
             raise ConfigParamDoesNotExist('could not find data_loader_class in config file.')
 
-        if self.do_train_augmentation or self.do_validation_augmentation:
-            try:
-                augmentor_class_path = self.config.augmentor_class
-            except AttributeError:
-                raise ConfigParamDoesNotExist('could not find augmentor_class in config file.')
-        else:
-            augmentor_class_path = None
-
-        try:
-            evaluator_class_path = self.config.evaluator_class
-        except AttributeError:
-            raise ConfigParamDoesNotExist('could not find evaluator_class in config file.')
-
-        return model_class_path, preprocessor_class_path, data_loader_class_path, augmentor_class_path, evaluator_class_path
-
-    def _create_data_loader(self, class_path):
         data_loader = locate(class_path)(self.config, self.data_dir)
         assert isinstance(data_loader, DataLoaderBase)
         self.logger.info('data-loader has been initialized.')
         return data_loader
 
-    def _create_augmentor(self, class_path):
+    def _create_augmentor(self):
+        if self.do_train_augmentation or self.do_validation_augmentation:
+            try:
+                class_path = self.config.augmentor_class
+            except AttributeError:
+                raise ConfigParamDoesNotExist('could not find augmentor_class in config file.')
+        else:
+            class_path = None
+
         if class_path is not None:
             augmentor = locate(class_path)(self.config)
             assert isinstance(augmentor, AugmentorBase)
@@ -176,13 +150,23 @@ class Orchestrator:
 
         return augmentor
 
-    def _create_preprocessor(self, class_path):
+    def _create_preprocessor(self):
+        try:
+            class_path = self.config.preprocessor_class
+        except AttributeError:
+            raise ConfigParamDoesNotExist('could not find preprocessor_class in config file.')
+
         preprocessor = locate(class_path)(self.config)
         assert isinstance(preprocessor, PreprocessorBase)
         self.logger.info('preprocessor has been initialized.')
         return preprocessor
 
-    def _create_model_builder(self, class_path):
+    def _create_model_builder(self):
+        try:
+            class_path = self.config.model_builder_class
+        except AttributeError:
+            raise ConfigParamDoesNotExist('could not find model_builder_class in config file.')
+
         model_builder = locate(class_path)(self.config)
         assert isinstance(model_builder, ModelBuilderBase)
         self.logger.info('model-builder has been initialized.')
@@ -193,10 +177,16 @@ class Orchestrator:
         self.logger.info('trainer has been initialized')
         return trainer
 
-    def _create_evaluator(self, class_path):
+    def _create_evaluator(self):
+        try:
+            class_path = self.config.evaluator_class
+        except AttributeError:
+            raise ConfigParamDoesNotExist('could not find evaluator_class in config file.')
+
         evaluator = locate(class_path)(self.config)
         assert isinstance(evaluator, EvaluatorBase)
         self.logger.info('evaluator has been initialized.')
+        return evaluator
 
     def _write_eval_reports(self, report_df: pd.DataFrame) -> pathlib.Path:
         # path = EVAL_REPORTS_DIR.joinpath(self.config.project_name).joinpath(self.run_name)
@@ -235,102 +225,3 @@ if __name__ == '__main__':
 
     orchestrator = Orchestrator(run_dir=run_dir, data_dir=data_dir)
     orchestrator.run()
-
-    # config_path = check_for_config_file(run_dir)
-    # config_file = load_config_file(config_path.absolute())
-    # logger.info(f'config file loaded: {config_path}')
-    #
-    # sys.path.append(config_file.src_code_path)
-    # logger.info(f'{config_file.src_code_path} has been added to system paths.')
-    #
-    # model_class_path, preprocessor_class_path, data_loader_class_path, \
-    # augmentor_class_path, evaluator_class_path = get_class_paths(config_file)
-    #
-    # # Dataset
-    # data_loader_class = locate(data_loader_class_path)
-    # data_loader = data_loader_class(config_file, data_dir)
-    # assert isinstance(data_loader, DataLoaderBase)
-    # train_data_gen, train_n = data_loader.create_training_generator()
-    # validation_data_gen, validation_n = data_loader.create_validation_generator()
-    # logger.info('data-generators has been created')
-    #
-    # # Augmentor
-    # if augmentor_class_path is not None:
-    #     augmentor_class = locate(augmentor_class_path)
-    #     augmentor = augmentor_class(config_file)
-    #     assert isinstance(augmentor, AugmentorBase)
-    #     if config_file.do_train_augmentation:
-    #         train_data_gen = augmentor.add_augmentation(train_data_gen)
-    #         logger.info('added training augmentations')
-    #     if config_file.do_validation_augmentation:
-    #         validation_data_gen = augmentor.add_augmentation(validation_data_gen)
-    #         logger.info('added validation augmentations')
-    # else:
-    #     logger.info('no augmentations')
-    #
-    # # Preprocessor
-    # preprocessor_class = locate(preprocessor_class_path)
-    # preprocessor = preprocessor_class(config_file)
-    # assert isinstance(preprocessor, PreprocessorBase)
-    # train_data_gen, n_iter_train = preprocessor.add_preprocess(train_data_gen, train_n, config_file.batch_size)
-    # validation_data_gen, n_iter_val = preprocessor.add_preprocess(validation_data_gen, validation_n, config_file.batch_size)
-    # logger.info('added preprocessing to data-generators')
-    #
-    # # Model
-    # model_class = locate(model_class_path)
-    # model_builder = model_class(config_file)
-    # logger.info('model-builder has been created')
-    #
-    # # Trainer
-    # mlflow_active_run = setup_mlflow(mlflow_tracking_uri=MLFLOW_TRACKING_URI,
-    #                                  mlflow_experiment_name=config_file.project_name,
-    #                                  base_dir=run_dir)
-    # trainer = Trainer(config=config_file, run_dir=run_dir)
-    # logger.info('trainer has been initialized')
-    #
-    # # Train
-    # logger.info('training started ...')
-    # trainer.train(model_builder=model_builder,
-    #               active_run=mlflow_active_run,
-    #               train_data_gen=train_data_gen,
-    #               n_iter_train=n_iter_train,
-    #               val_data_gen=validation_data_gen,
-    #               n_iter_val=n_iter_val)
-    #
-    # # Export
-    # exported_dir = trainer.export()
-    # logger.info(f'exported to {exported_dir}.')
-    #
-    # # Initializations for evaluation
-    # exported_model = tfk.models.load_model(trainer.exported_saved_model_path)
-    # logger.info(f'loaded {trainer.exported_saved_model_path}')
-    # mlflow.end_run()
-    # eval_active_run = setup_mlflow(mlflow_tracking_uri=MLFLOW_TRACKING_URI,
-    #                                mlflow_experiment_name=config_file.project_name,
-    #                                base_dir=run_dir,
-    #                                evaluation=True)
-    # evaluator_class = locate(evaluator_class_path)
-    # evaluator = evaluator_class(config_file)
-    # assert isinstance(evaluator, EvaluatorBase)
-    #
-    # # Evaluate on evaluation data
-    # logger.info('evaluation started...')
-    # eval_report = evaluator.evaluate(data_loader=data_loader,
-    #                                  preprocessor=preprocessor,
-    #                                  exported_model=exported_model,
-    #                                  active_run=eval_active_run)
-    # eval_report_path = write_eval_reports(eval_report, str(config_file.project_name), run_dir.name)
-    # logger.info(f'wrote evaluation report to {eval_report_path}')
-    # with eval_active_run:
-    #     mlflow.log_artifact(eval_report_path)
-    #
-    # # Evaluate on validation data
-    # logger.info('evaluation (validation data) started...')
-    # val_index = data_loader.get_validation_index()
-    # eval_report_validation = evaluator.validation_evaluate(data_loader=data_loader,
-    #                                                        preprocessor=preprocessor,
-    #                                                        exported_model=exported_model,
-    #                                                        active_run=eval_active_run,
-    #                                                        index=val_index)
-    # eval_report_validation.to_csv(run_dir.joinpath("validation_report.csv"))
-    # logger.info(f'wrote evaluation (validation dataset) to {run_dir.joinpath("validation_report.csv")}')

@@ -51,6 +51,7 @@ class EvaluatorBase(BaseClass):
 
         test_data_gen, test_n = data_loader.create_test_generator()
         test_data_gen = preprocessor.add_image_preprocess(test_data_gen)
+        test_data_gen = preprocessor.add_label_preprocess(test_data_gen)
 
         report_df = self._get_eval_report(test_data_gen, test_n, exported_model)
         self._log_to_mlflow(active_run, report_df)
