@@ -3,7 +3,6 @@ pandas
 tqdm
 PyYAML==5.4.1
 mlflow
-pyslurm
 abstractions-pkg-aimedic
 sphinx
 sphinx_rtd_theme
