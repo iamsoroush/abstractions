@@ -34,18 +34,18 @@ class EvaluatorBase(BaseClass):
                  active_run: mlflow.ActiveRun) -> pandas.DataFrame:
         """Evaluates the model using ``eval_functions`` defined in ``get_eval_functions`` on test dataset.
 
-        Note: ``create_test_generator`` method of the ``data_loader`` will be used to create a data generator,
-         and this method expects a tuple of ``(image, label, data_id)`` as output.
+        Notes:
+            - ``create_test_generator`` method of the ``data_loader`` will be used to create a data generator, and this method expects a tuple of ``(image, label, data_id)`` as output.
 
         Args:
-            data_loader: DataLoaderBase, will be used for creating test-data-generator
-            preprocessor: PreprocessorBase, will be used to add image-preprocess to the test-data-generator
-            exported_model: a tensorflow.keras.Model which is ready for making inference.
+            data_loader: will be used for creating test-data-generator
+            preprocessor: will be used to add image-preprocess to the test-data-generator
+            exported_model: a ``tensorflow.keras.Model`` which is ready for making inference.
             active_run: mlflow's ``ActiveRun`` instance to log evaluation reports on.
 
         Returns:
-            df: a pandas.DataFrame with index=``data_id``s, each row represents the result for a single data-point
-             and each column represents a metric.
+            a ``pandas.DataFrame`` with index= ``data_id`` s, each row represents the result for a single data-point and
+            each column represents a metric.
 
         """
 
@@ -66,20 +66,19 @@ class EvaluatorBase(BaseClass):
                             index) -> pandas.DataFrame:
         """Evaluates the model using ``eval_functions`` defined in ``get_eval_functions`` on validation dataset.
 
-        Note: ``create_validation_generator`` method of the ``data_loader`` will be used to create a data generator,
-         and this method expects a tuple of ``(image, label, data_id/sample_weight)`` as output.
+        Notes:
+            - ``create_validation_generator`` method of the ``data_loader`` will be used to create a data generator, and this method expects a tuple of ``(image, label, data_id/sample_weight)`` as output.
 
         Args:
-            data_loader: DataLoaderBase, will be used for creating test-data-generator
-            preprocessor: PreprocessorBase, will be used to add image-preprocess to the test-data-generator
-            exported_model: a tensorflow.keras.Model which is ready for making inference.
-            active_run: mlflow's ``ActiveRun`` instance to log evaluation reports on.
-            index: a list of ``data_id``s to use as report data-frame's index. use this if your validation generator
-             does not return a unique ``data_id`` as third element.
+            data_loader: will be used for creating test-data-generator.
+            preprocessor: will be used to add image-preprocess to the test-data-generator.
+            exported_model: a ``tensorflow.keras.Model`` which is ready for making inference.
+            active_run: mlflow's ``ActiveRun`` instance to log evaluation reports to.
+            index: a list of ``data_id`` s to use as report data-frame's index. use this if your validation generator does not return a unique ``data_id`` as third element.
 
         Returns:
-            df: a pandas.DataFrame with index=``data_id``s, each row represents the result for a single data-point
-             and each column represents a metric.
+            a ``pandas.DataFrame`` with index= ``data_id`` s, each row represents the result for a single data-point
+            and each column represents a metric.
 
         """
 
@@ -90,15 +89,17 @@ class EvaluatorBase(BaseClass):
         self._log_to_mlflow(active_run, report_df, prefix='validation')
         if index is not None:
             report_df.index = index
+        else:
+            report_df.index = list(range(val_n))
 
         return report_df
 
     @staticmethod
     def _wrap_pred_step(model):
-        """Overrides the ``predict`` method of model.
+        """Overrides the ``predict`` method of the model.
 
         By calling ``predict`` method of the model, three lists will be returned:
-         (predictions, ground truths, data_ids/sample_weights)
+         ``(predictions, ground truths, data_ids/sample_weights)``
         """
 
         def new_predict_step(data):
@@ -125,7 +126,7 @@ class EvaluatorBase(BaseClass):
         eval_funcs = self.get_eval_funcs()
         report = {k: list() for k in eval_funcs.keys()}
         indxs = list()
-        count = 1
+        count = 0
         with tqdm(total=data_n) as pbar:
             try:
                 for elem in data_gen:
@@ -144,7 +145,7 @@ class EvaluatorBase(BaseClass):
 
                     pbar.update(1)
                     count += 1
-                    if count > data_n:
+                    if count >= data_n:
                         break
             except (StopIteration, RuntimeError):
                 print('stop iteration ...')
@@ -152,16 +153,18 @@ class EvaluatorBase(BaseClass):
         df = pd.DataFrame(report, index=indxs)
         return df
 
+    def _batch_eval_report(self, data_gen, n_iter, model):
+        #TODO: write this method for performance improvements
+        pass
+
     @abstractmethod
     def get_eval_funcs(self) -> EvalFuncs:
         """Evaluation functions to use for evaluation.
 
-        You should take ``model.predict``'s outputs into account. Your functions should take ``(y_true, y_pred)`` as
-         inputs (not batch), and return a single output for this data-point.
+        You should take ``model.predict`` outputs into account. Your functions must take ``(y_true, y_pred)`` as
+        inputs (not batch), and return a single output for this data-point.
 
         Returns:
-            a dictionary mapping from metric names to metric functions:
-                {'iou': iou_metric,
-                 'dice': get_dice_metric(), ...}
+            a dictionary mapping from metric names to metric functions: ``{'iou': iou_metric, 'dice': get_dice_metric(), ...}``
 
         """

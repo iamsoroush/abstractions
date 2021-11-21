@@ -95,6 +95,7 @@ if __name__ == '__main__':
             f.write(f'cd {str(repo_root)}\n')
             f.write(f'git fetch --all\n')
             f.write(f'git checkout -b {branch}\n')
+            f.write(f'cd {run_dir}\n')
             f.write(f'python3 {str(ORCHESTRATOR_PATH)} --run_dir {str(run_dir)} --data_dir {str(args.data_dir)}\n')
 
             if do_commit:
@@ -103,5 +104,4 @@ if __name__ == '__main__':
                 f.write(f'git commit {run_dir} -m "add run results, from graham"\n')
                 f.write(f'git push origin\n')
 
-        os.system(f'cd {run_dir}\n')
         os.system(f'sbatch {script_path}')

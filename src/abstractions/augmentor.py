@@ -6,7 +6,14 @@ from .base_class import BaseClass
 class AugmentorBase(BaseClass):
     """Augmentor class.
 
-    Augmentations should not change the input image/label's d-type and range.
+    Notes:
+        - Augmentations should not change the input image/label's d-type, size and range, any modifications that need to be the same in inference adn training must be implemented in ``Preprocessor``
+        - Make sure that label/image augmentation are compatible.
+
+    Examples:
+        >>> augmentor = Augmentor(config)
+        >>> data_gen = augmentor.add_augmentation(data_gen)
+
     """
 
     @abstractmethod
@@ -17,11 +24,11 @@ class AugmentorBase(BaseClass):
 
         Args:
             generator: a ``Python generator`` or ``tf.data.Dataset`` which yields a single data-point of
-             ``(x, y, sample_weight)`` or ``(x, y, data_id)`` if it is ``test_data_generator``
+             ``(x, y, sample_weight(s))`` or ``(x, y, data_id)`` if it is ``test_data_generator``.
 
-             shapes => ``x`` => input image,
-                       ``y`` => label, or segmentation map for segmentation
-                       ``sample_weight`` => float (classification), or binary segmentation map (segmentation)
+                - ``x``: input image,
+                - ``y``: label, or segmentation map (segmentation)
+                - ``sample_weight``: float (classification/segmentation), or binary segmentation map (segmentation)
 
         Returns:
             A ``generator``/``tf.data.Dataset`` with augmented elements.
@@ -33,15 +40,15 @@ class AugmentorBase(BaseClass):
         """If you have different augmentation strategy for validation.
 
         If you don't want to ``do_validation_augmentation`` or you have similar augmentation strategies for train
-         and validation, just skip over-riding this method.
+        and validation, just skip over-riding this method.
 
         Args:
             generator: a ``Python generator`` or ``tf.data.Dataset`` which yields a single data-point of
-             ``(x, y, sample_weight)`` or ``(x, y, data_id)`` if it is ``test_data_generator``
+             ``(x, y, sample_weight(s))`` or ``(x, y, data_id)`` if it is ``test_data_generator``.
 
-             shapes => ``x`` => input image,
-                       ``y`` => label, or segmentation map for segmentation
-                       ``sample_weight`` => float (classification), or binary segmentation map (segmentation)
+                - ``x``: input image,
+                - ``y``: label, or segmentation map (segmentation)
+                - ``sample_weight``: float (classification/segmentation), or binary segmentation map (segmentation)
 
         Returns:
             A ``generator``/``tf.data.Dataset`` with augmented elements.

@@ -1,37 +1,50 @@
 from abc import abstractmethod
+import typing
+
+import tensorflow.keras as tfk
 
 from .base_class import BaseClass
 
 
 class ModelBuilderBase(BaseClass):
+    """Building and compiling models to train with Trainer.
+
+    Examples:
+        >>> model_builder = ModelBuilder(config)
+        >>> model = model_builder.get_compiled_model()
+        >>> callbacks = model_builder.get_callbacks()
+        >>> class_weight = model_builder.get_class_weight()
+        >>> model.fit(train_gen, n_iter_train, callbacks=callbacks, class_weight=class_weight)
+
+    """
 
     @abstractmethod
-    def get_compiled_model(self):
+    def get_compiled_model(self) -> tfk.Model:
         """Generates the model for training, and returns the compiled model.
 
         Returns:
-            A compiled Keras model.
+            A compiled ``tensorflow.keras`` model.
         """
 
         pass
 
-    def get_callbacks(self):
+    def get_callbacks(self) -> list:
         """Returns any callbacks for ``fit``.
 
         Returns:
-            A list of tf.keras.Callback objects. Orchestrator will handle the ModelCheckpoint and Tensorboard callbacks.
+            list of ``tf.keras.Callback`` objects. ``Orchestrator`` will handle the ``ModelCheckpoint`` and ``Tensorboard`` callbacks.
             Still, you can return each of these two callbacks, and orchestrator will modify your callbacks if needed.
 
         """
         return list()
 
-    def get_class_weight(self):
+    def get_class_weight(self) -> typing.Optional[dict]:
         """Set this if you want to pass ``class_weight`` to ``fit``.
 
         Returns:
-           Optional dictionary mapping class indices (integers) to a weight (float) value,
-           used for weighting the loss function (during training only). This can be useful to
-           tell the model to "pay more attention" to samples from an under-represented class.
+           Optional dictionary mapping class indices (integers) to a weight (float) value.
+           used for weighting the loss function (during training only).
+           This can be useful to tell the model to "pay more attention" to samples from an under-represented class.
 
         """
 

@@ -19,19 +19,15 @@ class Trainer(BaseClass):
         self.export_metric = config.export.metric
         self.export_mode = config.export.mode
 
-        # Paths
-        self.checkpoints_dir = self.run_dir.joinpath('checkpoints')
-        self.tensorboard_log_dir = self.run_dir.joinpath('logs')
-        self.run_id_path = self.run_dir.joinpath('run_id.txt')
-        self.exported_dir = self.run_dir.joinpath('exported')
-        self.exported_saved_model_path = self.exported_dir.joinpath('savedmodel')
-        self.config_file_path = [i for i in self.run_dir.iterdir() if i.name.endswith('.yaml')][0]
-
     def _set_defaults(self):
         self.epochs = 10
         self.export_metric = 'val_loss'
         self.export_mode = 'min'
 
+    def __init__(self, config, run_dir):
+        self.run_dir = pathlib.Path(run_dir)
+        super().__init__(config=config)
+
         # Paths
         self.checkpoints_dir = self.run_dir.joinpath('checkpoints')
         self.tensorboard_log_dir = self.run_dir.joinpath('logs')
@@ -39,10 +35,6 @@ class Trainer(BaseClass):
         self.exported_dir = self.run_dir.joinpath('exported')
         self.exported_saved_model_path = self.exported_dir.joinpath('savedmodel')
         self.config_file_path = [i for i in self.run_dir.iterdir() if i.name.endswith('.yaml')][0]
-
-    def __init__(self, config, run_dir):
-        self.run_dir = pathlib.Path(run_dir)
-        super().__init__(config=config)
 
         # Raise exception if the best model is already exported.
         self._check_for_exported()
@@ -63,17 +55,17 @@ class Trainer(BaseClass):
               n_iter_val):
         """Trains the model using data generators and logs to ``mlflow``.
 
-        Will try to resume training from latest checkpoint, else starts training from epoch=0.
+        Will try to resume training from latest checkpoint, else starts training from ``epoch=0``.
 
         Args:
             model_builder: will be used for generating model if no checkpoints could be find.
             active_run: ``mlflow.ActiveRun`` for logging to **mlflow**. This will be used inside a context manager.
-            train_data_gen: preprocessed, augmented train data-generator.This will be the output of
+            train_data_gen: preprocessed, augmented training-data-generator.This will be the output of
              ``Preprocessor.add_batch_preprocess``.
-            n_iter_train: ``steps_per_epoch`` in ``model.fit``
+            n_iter_train: ``steps_per_epoch`` for ``model.fit``
             val_data_gen: preprocessed, augmented validation data-generator.This will be the output of
              ``Preprocessor.add_batch_preprocess``.
-            n_iter_val: ``validation_steps`` in ``model.fit``
+            n_iter_val: ``validation_steps`` for ``model.fit``
 
         """
 
@@ -116,12 +108,13 @@ class Trainer(BaseClass):
                                       callbacks=callbacks)
 
     def export(self) -> pathlib.Path:
-        """Exports the best version of ``SavedModel``s, and config.yaml file into exported sub_directory.
+        """Exports the best version of ``SavedModel`` s, and ``config.yaml`` file into exported sub_directory.
 
         This method will delete all checkpoints after exporting the best one.
 
         Returns:
-            exported_dir: directory to exported model and config file.
+            directory to exported model and config file.
+
         """
 
         best_model_info = self._get_best_checkpoint()
