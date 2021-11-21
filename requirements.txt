@@ -5,3 +5,4 @@ PyYAML==5.4.1
 mlflow
 sphinx
 sphinx_rtd_theme
+myst-parser

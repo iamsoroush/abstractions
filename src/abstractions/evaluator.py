@@ -2,7 +2,6 @@ import types
 from abc import abstractmethod
 
 import mlflow
-import pandas
 from tqdm import tqdm
 import typing
 
