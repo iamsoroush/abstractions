@@ -30,7 +30,7 @@ class EvaluatorBase(BaseClass):
                  data_loader: DataLoaderBase,
                  preprocessor: PreprocessorBase,
                  exported_model: tfk.Model,
-                 active_run: mlflow.ActiveRun) -> pandas.DataFrame:
+                 active_run: mlflow.ActiveRun) -> pd.DataFrame:
         """Evaluates the model using ``eval_functions`` defined in ``get_eval_functions`` on test dataset.
 
         Notes:
@@ -62,7 +62,7 @@ class EvaluatorBase(BaseClass):
                             preprocessor: PreprocessorBase,
                             exported_model: tfk.Model,
                             active_run: mlflow.ActiveRun,
-                            index) -> pandas.DataFrame:
+                            index) -> pd.DataFrame:
         """Evaluates the model using ``eval_functions`` defined in ``get_eval_functions`` on validation dataset.
 
         Notes:
