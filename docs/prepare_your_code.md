@@ -32,8 +32,7 @@ datasets/
             labels.txt -> pd.DataFrame({'image name': [...], 'label': [...]})
         validation/
         test/
-
-
+```
 
 ```python
 import tensorflow as tf
