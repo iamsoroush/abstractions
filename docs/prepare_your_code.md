@@ -186,7 +186,7 @@ We will do that in two different ways,
 1. using `tf.data.Dataset` and,
 2. vanilla Python generator
 
-### `tf.data.Dataset`
+### tf.data.Dataset
 
 
 
