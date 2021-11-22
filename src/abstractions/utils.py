@@ -3,7 +3,60 @@ import pathlib
 import logging
 import sys
 
+import mlflow
+
 from .abs_exceptions import ConfigNotFound, FoundMultipleConfigs
+
+
+def setup_mlflow(mlflow_tracking_uri, mlflow_experiment_name: str,
+                 base_dir: pathlib.Path, evaluation=False) -> mlflow.ActiveRun:
+    """Sets up mlflow and returns an ``active_run`` object.
+
+    tracking_uri/
+        experiment_id/
+            run1
+            run2
+            ...
+
+    Args:
+        mlflow_tracking_uri: ``tracking_uri`` for mlflow
+        mlflow_experiment_name: ``experiment_name`` for mlflow, use the same ``experiment_name`` for all experiments
+        related to the same task. This is different from the ``experiment`` concept that we use.
+        base_dir: directory for your experiment, containing your `config.yaml` file.
+        evaluation: if evaluation==true, then new run will be created, named ``base_dir.name + _evaluation``
+
+    Returns:
+        active_run: an ``active_run`` object to use for mlflow logging.
+
+    """
+
+    # Loads run_id if exists
+    run_id = None
+    run_id_path = base_dir.joinpath('run_id.txt')
+    run_name = base_dir.name
+    if evaluation:
+        run_name += '_evaluation'
+    elif run_id_path.exists():
+        with open(run_id_path, 'r') as f:
+            run_id = f.readline()
+
+    mlflow.set_tracking_uri(mlflow_tracking_uri)
+    client = mlflow.tracking.MlflowClient(mlflow_tracking_uri)
+
+    # Create new run if run_id does not exist
+    if run_id is not None:
+        mlflow.set_experiment(mlflow_experiment_name)
+        active_run = mlflow.start_run(run_id=run_id)
+    else:
+        experiment = client.get_experiment_by_name(mlflow_experiment_name)
+        if experiment is not None:
+            experiment_id = experiment.experiment_id
+        else:
+            experiment_id = mlflow.create_experiment(mlflow_experiment_name)
+
+        active_run = mlflow.start_run(experiment_id=experiment_id, run_name=run_name)
+
+    return active_run
 
 
 def check_for_config_file(run_dir: pathlib.Path) -> pathlib.Path:

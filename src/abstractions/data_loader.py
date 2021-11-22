@@ -2,6 +2,7 @@ import pathlib
 from abc import abstractmethod
 
 from .base_class import BaseClass
+from .utils import ConfigStruct
 
 
 class DataLoaderBase(BaseClass):
@@ -15,6 +16,10 @@ class DataLoaderBase(BaseClass):
         - Output of train/validation generators will be a tuple of (image, label/segmentation_map, sample_weight). If you don't need ``sample_weight``, set it to ``1`` for all data-points.
         - Output of test generator will be a tupple of (image, label/segmentation_map, data_id). Each ``data_id`` could be anything specific that can help to retrieve this data point. You can consider to set ``data_id=row_id`` of the test subset's dataframe, if you are have one.
         - You can use the third argument with weighted metrics, or for weighted custom loss functions.
+
+    Attributes:
+        data_dir: absolute directory of the dataset
+        config (ConfigStruct): config file
 
 
     Examples:

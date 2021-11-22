@@ -1,10 +1,14 @@
 Installation
 ============
 
+PiP
+---
 
-Using ``pip``: ``pip install abstractions-aimedic``
+``pip install abstractions-aimedic``
 
-or,
+
+build from source
+-----------------
 
 1. clone the repository: ``git clone https://github.com/iamsoroush/abstractions.git``
 2. cd into it: ``cd abstractions``
