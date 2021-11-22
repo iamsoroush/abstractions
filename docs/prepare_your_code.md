@@ -152,6 +152,33 @@ print(f'outputs: {model.outputs}')
 
 So we need to design our data-pipeline in a way that will generate batches of data compatible with this input-output. Also, we have to take this into account when we are desigining metric functions for our `Evaluator`, functions that expect an array with `shape(10,)` as `y_true` and `y_pred`.
 
+
+## Define evaluator functions
+
+For evaluating the model, orchestrator uses `Evaluator` and generates detailed report about the model and the test and validation data.
+
+We have to define one method: `get_eval_funcs`. This method must return a dictionary which is a mapping from function names to function objects. Evaluator will call every function in this dictionary like this `function(y_true, y_pred)`. Note that `y_true` and `y_pred` are not batches, and in our case will be a tensor of `shape(10,)`.
+
+Let's define the evaluator inside the `evaluation.py` module:
+
+
+```python
+from abstractions import EvaluatorBase
+
+
+class Evaluator(EvaluatorBase):
+    def get_eval_funcs(self):
+        return {'sparse categorical ce': self.get_cat_loss()}
+
+    def get_cat_loss(self, from_logits=False):
+
+        def scce_loss(y_true, y_pred):
+            scce = tfk.losses.SparseCategoricalCrossentropy(from_logits=from_logits)
+            return scce(y_true, y_pred).numpy()
+
+        return scce_loss
+```
+
 ## Define your data pipeline: `DataLoader`, `Augmentor`, `Preprocessor`
 
 Define `DataLoader`, `Augmentor` and `Preprocessr` by sub-classing `abstractions.DataLoaderBase`, `abstractions.AugmentorBase` and `abstractions.PreprocessorBase`.
@@ -625,32 +652,6 @@ print(f'w batch shape: {batch[2].shape}')
     y batch shape: (8,)
     w batch shape: (8,)
 
-
-## Define evaluator functions
-
-For evaluating the model, orchestrator uses `Evaluator` and generates detailed report about the model and the test and validation data.
-
-We have to define one method: `get_eval_funcs`. This method must return a dictionary which is a mapping from function names to function objects. Evaluator will call every function in this dictionary like this `function(y_true, y_pred)`. Note that `y_true` and `y_pred` are not batches, and in our case will be a tensor of `shape(10,)`.
-
-Let's define the evaluator inside the `evaluation.py` module:
-
-
-```python
-from abstractions import EvaluatorBase
-
-
-class Evaluator(EvaluatorBase):
-    def get_eval_funcs(self):
-        return {'sparse categorical ce': self.get_cat_loss()}
-
-    def get_cat_loss(self, from_logits=False):
-
-        def scce_loss(y_true, y_pred):
-            scce = tfk.losses.SparseCategoricalCrossentropy(from_logits=from_logits)
-            return scce(y_true, y_pred).numpy()
-
-        return scce_loss
-```
 
 ## Define your `config.yaml`
 
