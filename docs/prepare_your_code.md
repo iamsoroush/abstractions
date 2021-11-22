@@ -661,7 +661,7 @@ Your config file should follow a convention:
 
 - `input_height`: 28
 - `input_width`: 28
-- `src_code_path`: 'src' # required, this is where your code  in your repository
+- `src_code_path`: 'src' # required, location of your source code relative to repository's root
 - `data_loader_class`: 'dataset.DataLoaderTF' # required
 - `preprocessor_class`: 'preprocessing.PreprocessorTF' # required
 - `model_builder_class`: 'models.ModelBuilder' # required
