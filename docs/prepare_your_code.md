@@ -1,13 +1,13 @@
 # Prepare your code for submitting a training job
 
-To be able to submit a training session using *AIMed*'s training engine, we have to define five components for a training session: `DataLoader`, `Augmentor` (optional), `Preprocessor`, `ModelBuilder` and `Evaluator`. Orchestrator will instantiate these components using a config file, and pass them to `TFKerasTrainer` to which will take care of training (resume interrupted training session), logging (`tensorboard` and `mlflow`), exporting (to `SavedModel` format) and checkpointing. Orchestrator will pass the exported model to `Evaluator` which is responsible for evaluation on test and validation data. `Evaluator` will generate detailed `.csv` report files for error analysis, these reports contain metric values for each data-point. Here's the sequence diagram: [training pipeline](https://miro.com/app/board/o9J_lmFWJy8=/?invite_link_id=789107961780).
+To be able to submit a training session using *AIMed*'s training engine, we have to define five components for a training session: `DataLoader`, `Augmentor` (optional), `Preprocessor`, `ModelBuilder` and `Evaluator`. Orchestrator will instantiate these components using a config file, and pass them to `TFKerasTrainer` which will take care of training (resume interrupted training session), logging (`tensorboard` and `mlflow`), exporting (to `SavedModel` format) and checkpointing. Orchestrator will pass the exported model to `Evaluator` which is responsible for evaluation on test and validation data. `Evaluator` will generate detailed `.csv` report files for error analysis, these reports contain metric values for each data-point. Here's the sequence diagram: [training pipeline](https://miro.com/app/board/o9J_lmFWJy8=/?invite_link_id=789107961780).
 
 We will go through an example, in which we will train and evaluate a classifier for `mnist` dataset. Code is available [here](https://github.com/iamsoroush/mnist-test.git).
 
 ---
 **Note**
 
-try in yourself: [notebook](https://colab.research.google.com/drive/1hNinB5b8qNNyt6UzWeDYDNGBA0G36VVK?usp=sharing)
+try it yourself: [notebook](https://colab.research.google.com/drive/1hNinB5b8qNNyt6UzWeDYDNGBA0G36VVK?usp=sharing)
 
 ---
 
@@ -19,7 +19,7 @@ pip install abstractions-aimedic
 
 ## Generate Data
 
-Let's create a well-structered mnist dataset. This code snippet will generate a dataset structered as follow:
+Let's create a well-structered mnist dataset. This code snippet will generate a dataset structured as follows:
 
 ```
 datasets/
@@ -89,7 +89,7 @@ write_images(test_images[500:], test_labels[500:], test_img_dir)
 
 Know let's define the objective. We have a dataset of `RGB(0, 255)` with `shape(28, 28, 3)`, and we want to train a model that classifies input images to one of `(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)` classes.
 
-We will define the model, optimizer, loss, training-time-metrics and any other stuff that is necessary to pass a compiled, ready-to-fit model to orchestrator.
+We will define the model, optimizer, loss, training-time-metrics and any other stuff that is necessary to create and pass a compiled, ready-to-fit model to orchestrator.
 
 We need to define the `get_compiled_model` method of our `ModelBuilder` which is sub-classed from `abstractions.ModelBuilderBase`. Take a look at [this](https://abstractions.readthedocs.io/en/latest/apidoc/abstractions.html#module-abstractions.model_builder) for more info.
 
@@ -133,9 +133,9 @@ class ModelBuilder(ModelBuilderBase):
         self.input_w = 28
 ```
 
-Note that every class which is sub-classed from `abstractions.BaseClass` must define `_load_params` and `_set_defaults` methods. All of your class parameters has to be difned here. You should define your parameters' default values in `_set_defaults` method, and load the same paramters from config file in `_load_params`. This way, you can be clear about what could be modified inside your class, and you can use this class with `config=None` in exploration phase.
+Note that every class which is sub-classed from `abstractions.BaseClass` must define `_load_params` and `_set_defaults` methods. All of your class parameters has to be difned here. You should define your parameters' default values in `_set_defaults` method, and load the same parameters from config file in `_load_params`. This way, you can be clear about what could be modified inside your class, and you can use this class with `config=None` in exploration phase.
 
-Let's see what are the inpput-output signatures of the model:
+Let's see what are the input-output of the model:
 
 
 ```python
@@ -150,12 +150,12 @@ print(f'outputs: {model.outputs}')
     outputs: [<KerasTensor: shape=(None, 10) dtype=float32 (created by layer 'dense_3')>]
 
 
-So we need to design our data-pipeline in a way that will generate batches of data compatible with this input-output. Also, we have to take this into account when we are desigining metric functions for our `Evaluator`, functions that expect an array with `shape(10,)` as `y_true` and `y_pred`.
+So we need to design our data-pipeline in a way that will generate batches of data compatible with this input-output. Also, we have to take this into account when we are designing metric functions for our `Evaluator`, functions that expect an array with `shape(10,)` as `y_true` and `y_pred`.
 
 
 ## Define evaluator functions
 
-For evaluating the model, orchestrator uses `Evaluator` and generates detailed report about the model and the test and validation data.
+In order to evaluate the model, orchestrator uses `Evaluator` and generates detailed report about the model using test and validation data.
 
 We have to define one method: `get_eval_funcs`. This method must return a dictionary which is a mapping from function names to function objects. Evaluator will call every function in this dictionary like this `function(y_true, y_pred)`. Note that `y_true` and `y_pred` are not batches, and in our case will be a tensor of `shape(10,)`.
 
@@ -325,9 +325,9 @@ print(f'data id: {data_id}')
     data id: b'image_0.jpg'
 
 
-Note that shuffling is done only for training data generator.
+Note that shuffling is done only for training-data-generator.
 
-Next, we will define our preprocessing logic inside `Preprocessor` module. Note that we don't have any augmentor's here, you can get more info about `Augmentor` [here](https://abstractions.readthedocs.io/en/latest/apidoc/abstractions.html#module-abstractions.augmentor).
+Next, we will define our preprocessing logic inside `Preprocessor` module. Note that we don't have any augmentations here, you can get more info about `Augmentor` [here](https://abstractions.readthedocs.io/en/latest/apidoc/abstractions.html#module-abstractions.augmentor).
 
 By sub-classing `PreprocessorBase`, we must define
 - `image_preprocess`
@@ -336,7 +336,7 @@ By sub-classing `PreprocessorBase`, we must define
 - `add_label_preprocess`
 - `batchify`
 
-Under the hood, orchestrator will try to call `add_preprocess` method of `Preprocessor`:
+Under the hood, orchestrator will try to call `add_preprocess` method of `Preprocessor`, which is:
 
 ```python
 gen = self.add_image_preprocess(generator)
@@ -392,7 +392,7 @@ class PreprocessorTF(PreprocessorBase):
 
 Note that we are repeating the dataset right after batching. This way we can be sure about having all data in each epoch.
 
-Let's look at the output of preprocessor:
+Let's take a look at output of preprocessor:
 
 
 ```python
@@ -564,7 +564,7 @@ By sub-classing `PreprocessorBase`, we must define
 - `add_label_preprocess`
 - `batchify`
 
-Under the hood, orchestrator will try to call `add_preprocess` method of `Preprocessor`:
+Under the hood, orchestrator will try to call `add_preprocess` method of `Preprocessor` which is:
 
 ```python
 gen = self.add_image_preprocess(generator)
@@ -632,7 +632,7 @@ class Preprocessor(PreprocessorBase):
 
 ```
 
-Let's look at the output of preprocessor:
+Let's look at the output of the preprocessor:
 
 
 ```python
@@ -655,7 +655,7 @@ print(f'w batch shape: {batch[2].shape}')
 
 ## Define your `config.yaml`
 
-Now, we have to define the config file. This file will contain any parameters that determine the state of the components, i.e. attributes of each of our classes.
+Now, we have to define the config file. This file contains any parameters that determine state of the components, i.e. attributes of each of our classes.
 
 Your config file should follow a convention:
 
@@ -688,4 +688,4 @@ Your config file should follow a convention:
 - `project_name`: 'mnist' # required, will be used as mlflow's experiment_name
 
 
-Put your config at `repo_root/runs/run_name`, push your code, and now you can request for a training session.
+Put your config inside `repo_root/runs/run_name`, push your code, and now you can request for a training session.
