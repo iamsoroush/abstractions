@@ -79,6 +79,8 @@ if __name__ == '__main__':
         do_commit = args.commit
 
         script_path = repo_root.joinpath(job_name + '.job')
+        err_log_path = run_dir.joinpath(f'log-{job_name}.out')
+        out_log_path = run_dir.joinpath(f'log-{job_name}.err')
 
         with open(script_path, 'w') as f:
             f.write('#!/bin/env bash\n\n')
@@ -87,16 +89,15 @@ if __name__ == '__main__':
             f.write('#SBATCH --gres gpu:p100:1\n')
             f.write(f'#SBATCH --job-name {job_name}\n')
             f.write(f'#SBATCH --time {hours}:00:00\n')
-            f.write(f'#SBATCH --output log-{job_name}.out\n')
-            f.write(f'#SBATCH --error log-{job_name}.err\n')
+            f.write(f'#SBATCH --output {out_log_path}\n')
+            f.write(f'#SBATCH --error {err_log_path}\n')
             f.write(f'#SBATCH --mem {memory}\n')
             f.write(f'#SBATCH --mail-user {email}\n\n')
 
-            f.write(f'cd {str(repo_root)}\n')
+            f.write(f'cd {repo_root}\n')
             f.write(f'git fetch --all\n')
             f.write(f'git checkout -b {branch}\n')
-            f.write(f'cd {run_dir}\n')
-            f.write(f'python3 {str(ORCHESTRATOR_PATH)} --run_dir {str(run_dir)} --data_dir {str(args.data_dir)}\n')
+            f.write(f'python3 {ORCHESTRATOR_PATH} --run_dir {run_dir} --data_dir {str(args.data_dir)}\n')
 
             if do_commit:
                 f.write(f'cd {repo_root}\n')

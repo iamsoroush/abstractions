@@ -7,9 +7,9 @@ input_width: 28 # For resizing and model creation
 src_code_path: 'src' # put '' if packages are in root directory of your repository
 
 # Classes
-data_loader_class: dataset.DataLoaderTF # Required
+data_loader_class: dataset.DataLoader # Required
 model_builder_class: models.ModelBuilder # Required
-preprocessor_class: preprocessing.PreprocessrorTF # Required
+preprocessor_class: preprocessing.Preprocessror # Required
 augmentor_class: augmentation.Augmentor
 evaluator_class: evaluation.Evaluator
 
