@@ -1,5 +1,12 @@
-tensorflow>=2.5.0
+tensorflow>=2.7.0
 pandas
-tqdm
-PyYAML==5.4.1
+scikit-learn
+scikit-image
+scipy
+matplotlib
 mlflow
+abstractions
+SimpleITK
+pyyaml
+albumentations
+tqdm

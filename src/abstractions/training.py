@@ -8,7 +8,7 @@ import tensorflow.keras.callbacks as tfkc
 import mlflow
 
 from .base_class import BaseClass
-from .model_builder import ModelBuilderBase
+from .model_building import ModelBuilderBase
 from .abs_exceptions import *
 
 

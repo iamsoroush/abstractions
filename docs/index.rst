@@ -11,7 +11,7 @@ Welcome to AIMedic's ``abstractions`` documentation!
    :caption: Contents:
 
    install
-   how-to <examples>
+   howto
    API <apidoc/modules.rst>
 
 

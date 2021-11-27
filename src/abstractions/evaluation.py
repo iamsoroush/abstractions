@@ -11,8 +11,8 @@ import tensorflow.keras as tfk
 import tensorflow as tf
 
 from .base_class import BaseClass
-from .data_loader import DataLoaderBase
-from .preprocessor import PreprocessorBase
+from .data_loading import DataLoaderBase
+from .preprocessing import PreprocessorBase
 
 
 EvalFuncs = typing.Dict[str, types.FunctionType]

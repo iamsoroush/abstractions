@@ -4,7 +4,7 @@ input_height: 28 # For resizing and model creation
 input_width: 28 # For resizing and model creation
 # n_channels must be set in code based on dataset and task
 
-src_code_path: 'src' # put '' if packages are in root directory of your repository
+src_code_path: 'src' # relative to project(repository)_dir, put '' if packages are in root directory of your repository
 
 # Classes
 data_loader_class: dataset.DataLoader # Required

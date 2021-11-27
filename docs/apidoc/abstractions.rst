@@ -12,7 +12,13 @@ abstractions.abs\_exceptions module
    :undoc-members:
    :show-inheritance:
 
+abstractions.augmentation module
+--------------------------------
 
+.. automodule:: abstractions.augmentation
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 abstractions.base\_class module
 -------------------------------
@@ -22,67 +28,53 @@ abstractions.base\_class module
    :undoc-members:
    :show-inheritance:
 
+abstractions.data\_loading module
+---------------------------------
 
-
-abstractions.data\_loader module
---------------------------------
-
-.. automodule:: abstractions.data_loader
+.. automodule:: abstractions.data_loading
    :members:
    :undoc-members:
    :show-inheritance:
 
+abstractions.evaluation module
+------------------------------
 
-
-abstractions.augmentor module
------------------------------
-
-.. automodule:: abstractions.augmentor
+.. automodule:: abstractions.evaluation
    :members:
    :undoc-members:
    :show-inheritance:
 
+abstractions.model\_building module
+-----------------------------------
 
-
-abstractions.preprocessor module
---------------------------------
-
-.. automodule:: abstractions.preprocessor
+.. automodule:: abstractions.model_building
    :members:
    :undoc-members:
    :show-inheritance:
 
+abstractions.orchestration module
+---------------------------------
 
-
-abstractions.model\_builder module
-----------------------------------
-
-.. automodule:: abstractions.model_builder
+.. automodule:: abstractions.orchestration
    :members:
    :undoc-members:
    :show-inheritance:
 
+abstractions.preprocessing module
+---------------------------------
 
-
-abstractions.evaluator module
------------------------------
-
-.. automodule:: abstractions.evaluator
+.. automodule:: abstractions.preprocessing
    :members:
    :undoc-members:
    :show-inheritance:
 
+abstractions.training module
+----------------------------
 
-
-abstractions.trainer module
----------------------------
-
-.. automodule:: abstractions.trainer
+.. automodule:: abstractions.training
    :members:
    :undoc-members:
    :show-inheritance:
-
-
 
 abstractions.utils module
 -------------------------
@@ -91,8 +83,6 @@ abstractions.utils module
    :members:
    :undoc-members:
    :show-inheritance:
-
-
 
 Module contents
 ---------------
