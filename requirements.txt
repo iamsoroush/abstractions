@@ -5,7 +5,6 @@ scikit-image
 scipy
 matplotlib
 mlflow
-abstractions
 SimpleITK
 pyyaml
 albumentations
