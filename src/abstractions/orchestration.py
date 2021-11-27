@@ -8,10 +8,15 @@ import mlflow
 import pandas as pd
 import tensorflow.keras as tfk
 
-from . import DataLoaderBase, AugmentorBase, PreprocessorBase, ModelBuilderBase, Trainer, EvaluatorBase,\
-    EVAL_REPORTS_DIR, MLFLOW_TRACKING_URI
+from . import DataLoaderBase, AugmentorBase, PreprocessorBase, ModelBuilderBase, Trainer, EvaluatorBase
 from .utils import load_config_file, check_for_config_file, get_logger, setup_mlflow, ConfigStruct
 from .abs_exceptions import *
+
+
+MLFLOW_TRACKING_URI = Path('/home').joinpath('vafaeisa').joinpath('mlruns')
+scratch_drive = Path('/home').joinpath('vafaeisa').joinpath('scratch')
+EVAL_REPORTS_DIR = scratch_drive.joinpath('eval_reports')
+# PROJECT_ROOT = Path(__file__).parent.parent
 
 
 class Orchestrator:
@@ -138,7 +143,7 @@ class Orchestrator:
         eval_report_path = self._write_eval_reports(eval_report)
         self.logger.info(f'wrote evaluation report to {eval_report_path}')
         with eval_active_run:
-            mlflow.log_artifact(eval_report_path)
+            mlflow.log_artifact(str(eval_report_path))
 
         # evaluate on validation data
         self.logger.info('evaluating on validation data...')
