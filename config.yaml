@@ -37,7 +37,7 @@ preprocessor:
 # Parameters for instantiating augmentation
 do_train_augmentation: True
 do_validation_augmentation: False
-augmentator:
+augmentor:
   rotation_proba: 0.5
   rotation_range: 45
   flip_proba: 0.5
