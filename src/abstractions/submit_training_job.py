@@ -8,8 +8,11 @@ import pyslurm
 # Make sure to clone/fetch your repository
 
 USER = os.getenv('USER')
-ORCHESTRATOR_PATH = Path('/home').joinpath(USER).joinpath('abstractions').joinpath('orchestrator.py')
+# ORCHESTRATOR_PATH = Path('/home').joinpath(USER).joinpath('abstractions').joinpath('orchestrator.py')
 MAX_JOBS = 10
+mj = os.getenv('MAX_JOBS')
+if mj is not None:
+    MAX_JOBS = int(mj)
 
 
 def parse_args():
@@ -60,7 +63,7 @@ def parse_args():
     return parser.parse_args()
 
 
-if __name__ == '__main__':
+def main():
     args = parse_args()
 
     jobs = pyslurm.job().find_user(USER)
@@ -69,6 +72,7 @@ if __name__ == '__main__':
     else:
         repo_root = Path(args.repo_root_dir).absolute()
         assert repo_root.is_dir(), f"{repo_root} is not a directory."
+        train_script_path = repo_root.joinpath('scripts').joinpath('train.py')
 
         run_dir = repo_root.joinpath('runs').joinpath(args.run_name)
         job_name = f'{repo_root.name}_{args.run_name}'
@@ -78,11 +82,11 @@ if __name__ == '__main__':
         hours = args.hours
         do_commit = args.commit
 
-        script_path = repo_root.joinpath(job_name + '.job')
+        job_script_path = repo_root.joinpath(job_name + '.job')
         err_log_path = run_dir.joinpath(f'log-{job_name}.out')
         out_log_path = run_dir.joinpath(f'log-{job_name}.err')
 
-        with open(script_path, 'w') as f:
+        with open(job_script_path, 'w') as f:
             f.write('#!/bin/env bash\n\n')
 
             f.write('#SBATCH --get-user-env\n')
@@ -97,7 +101,7 @@ if __name__ == '__main__':
             f.write(f'cd {repo_root}\n')
             f.write(f'git fetch --all\n')
             f.write(f'git checkout -b {branch}\n')
-            f.write(f'python3 {ORCHESTRATOR_PATH} --run_dir {run_dir} --data_dir {str(args.data_dir)}\n')
+            f.write(f'python3 {train_script_path} --run_dir {run_dir} --data_dir {str(args.data_dir)}\n')
 
             if do_commit:
                 f.write(f'cd {repo_root}\n')
@@ -105,4 +109,8 @@ if __name__ == '__main__':
                 f.write(f'git commit {run_dir} -m "add run results, from graham"\n')
                 f.write(f'git push origin\n')
 
-        os.system(f'sbatch {script_path}')
+        os.system(f'sbatch {job_script_path}')
+
+
+if __name__ == '__main__':
+    main()

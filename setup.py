@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name='abstractions-aimedic',
-    version='0.1.6',
+    version='0.1.7',
     license='MIT',
     author='Soroush Moazed',
     author_email='soroush.moazed@gmail.com',
@@ -13,6 +13,10 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://gitlab.aimedic.co/soroush.moazed/abstractions.git",
+    entry_points='''
+            [console_scripts]
+            submit=abstractions.submit_training_job:main
+        ''',
     # download_url="https://github.com/iamsoroush/abstractions/archive/refs/tags/v_0.1.6.tar.gz",
     classifiers=[
             'Development Status :: 3 - Alpha',      # Chose either "3 - Alpha", "4 - Beta" or "5 - Production/Stable" as the current state of your package
