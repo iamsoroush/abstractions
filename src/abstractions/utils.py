@@ -88,23 +88,24 @@ class ConfigStruct:
 
     Attributes:
         seed (int):
-        input_height (int):
-        input_width (int):
-        src_code_path (str):
-        data_loader_class (str):
-        model_builder_class (str):
-        preprocessor_class (str):
-        augmentor_class (str):
-        evaluator_class (str):
+        input_height (int): for resizing and model creation, this is input-height of your model's input and preprocessor's output
+        input_width (int): for resizing and model creation, this is input-width of your model's input and preprocessor's output
+        src_code_path (str): relative to project(repository)_dir,
+        data_dir (str): required for tests, provide absolute path to dataset, your data-loader should work using this path. you can provide a different dataset directory when submitting a training job.
+        data_loader_class (str): Required, relative to `src_code_path`
+        model_builder_class (str): Required, relative to `src_code_path`
+        preprocessor_class (str): Required, relative to `src_code_path`
+        augmentor_class (str): relative to `src_code_path`
+        evaluator_class (str): Required, relative to `src_code_path`
         epochs (int):
         batch_size (int):
-        data_loader (Struct):
-        model_builder (Struct):
-        preprocessor (Struct):
-        augmentor (Struct):
+        data_loader (Struct): parameters for instantiating DataLoader
+        model_builder (Struct): parameters for instantiating ModelBuilder
+        preprocessor (Struct): parameters for instantiating Preprocessor
+        augmentor (Struct): parameters for instantiating Augmentor
         do_train_augmentation (bool):
         do_validation_augmentation (bool):
-        export (Struct):
+        export (Struct): parameters for exporting, will be used by trainer
         project_name (str):
 
     """
@@ -114,6 +115,7 @@ class ConfigStruct:
         self.input_height = None
         self.input_width = None
         self.src_code_path = None
+        self.data_dir = None
         self.data_loader_class = None
         self.model_builder_class = None
         self.preprocessor_class = None
@@ -127,7 +129,7 @@ class ConfigStruct:
         self.augmentor = None
         self.do_train_augmentation = None
         self.do_validation_augmentation = None
-        self.export = None
+        self.export = Struct(metric='val_loss', mode='min')
         self.project_name = None
 
         for k, v in entries.items():

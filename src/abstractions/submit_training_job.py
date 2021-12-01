@@ -54,7 +54,7 @@ def parse_args():
     parser.add_argument('--data_dir',
                         type=str,
                         help='**absolute** directory of the dataset',
-                        required=True)
+                        required=False)
 
     parser.add_argument('--commit',
                         help='set this argument if you want to commit and push all the content of the run_dir.',
@@ -81,6 +81,7 @@ def main():
         memory = args.mem
         hours = args.hours
         do_commit = args.commit
+        data_dir = args.data_dir
 
         job_script_path = repo_root.joinpath(job_name + '.job')
         err_log_path = run_dir.joinpath(f'log-{job_name}.out')
@@ -101,7 +102,11 @@ def main():
             f.write(f'cd {repo_root}\n')
             f.write(f'git fetch --all\n')
             f.write(f'git checkout -b {branch}\n')
-            f.write(f'python3 {train_script_path} --run_dir {run_dir} --data_dir {str(args.data_dir)}\n')
+
+            if data_dir is None: # Use config.data_dir
+                f.write(f'python3 {train_script_path} --run_dir {run_dir}\n')
+            else:
+                f.write(f'python3 {train_script_path} --run_dir {run_dir} --data_dir {str(args.data_dir)}\n')
 
             if do_commit:
                 f.write(f'cd {repo_root}\n')

@@ -9,3 +9,5 @@ SimpleITK
 pyyaml
 albumentations
 tqdm
+pytest
+pytest-dependency

@@ -27,7 +27,7 @@ class Orchestrator:
 
     Args:
         run_name (str): name of the run folder containing the config file, i.e. ``{project_root}/runs/{run_name}``
-        data_dir (Path): absolute path to dataset
+        data_dir (Optional[Path]): absolute path to dataset
         project_root (Path): absolute path to the project(repository)'s directory
         eval_reports_dir (Path): directory of evaluation reports for all projects
         mlflow_tracking_uri (Path): tracking-uri used as mlflow's backend-store
@@ -49,20 +49,24 @@ class Orchestrator:
 
     def __init__(self,
                  run_name: str,
-                 data_dir: Path,
+                 data_dir: typing.Optional[Path],
                  project_root: Path,
                  eval_reports_dir: Path = EVAL_REPORTS_DIR,
                  mlflow_tracking_uri: Path = MLFLOW_TRACKING_URI):
         self.project_root = project_root
         self.run_name = run_name
         self.run_dir = project_root.joinpath('runs').joinpath(run_name)
-        self.data_dir = data_dir
 
         self.logger = get_logger('orchestrator')
 
         config_path = check_for_config_file(self.run_dir)
         self.config = load_config_file(config_path.absolute())
         self.logger.info(f'config file loaded: {config_path}')
+
+        if data_dir is not None:
+            self.data_dir = data_dir
+        else:
+            self.data_dir = Path(self.config.data_dir)
 
         # load params
         self.project_name = self.config.project_name
@@ -175,10 +179,7 @@ class Orchestrator:
                 class_path = self.config.augmentor_class
             except AttributeError:
                 raise ConfigParamDoesNotExist('could not find augmentor_class in config file.')
-        else:
-            class_path = None
 
-        if class_path is not None:
             augmentor = locate(class_path)(self.config)
             assert isinstance(augmentor, AugmentorBase)
             self.logger.info('augmentor has been initialized.')
