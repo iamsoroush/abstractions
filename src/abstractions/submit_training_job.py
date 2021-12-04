@@ -103,7 +103,7 @@ def main():
             f.write(f'git fetch --all\n')
             f.write(f'git checkout -b {branch}\n')
 
-            if data_dir is None: # Use config.data_dir
+            if data_dir is None:  # Use config.data_dir
                 f.write(f'python3 {train_script_path} --run_dir {run_dir}\n')
             else:
                 f.write(f'python3 {train_script_path} --run_dir {run_dir} --data_dir {str(args.data_dir)}\n')
