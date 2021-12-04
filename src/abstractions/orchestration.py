@@ -39,7 +39,7 @@ class Orchestrator:
         data_dir (Path): absolute path to dataset
         logger (logging.Logger): orchestrator's logger object
         config (ConfigStruct): config_file parsed as a python object with nested attributes
-        project_name (str): ``self.config.project_name``
+        project_name (str): repository's name
         src_code_path (Path): absolute path to source code, i.e. ``{self.project_root}/{self.config.src_code_path}``, will be included in system paths
         eval_report_dir (Path): path to evaluation reports for this run
         mlflow_tracking_uri (Path): tracking-uri used as mlflow's backend-store
@@ -69,7 +69,8 @@ class Orchestrator:
             self.data_dir = Path(self.config.data_dir)
 
         # load params
-        self.project_name = self.config.project_name
+        self.project_name = self.project_root.name
+        # self.project_name = self.config.project_name
         self.src_code_path = self.project_root.joinpath(self.config.src_code_path)
         self.do_train_augmentation = self.config.do_train_augmentation
         self.do_validation_augmentation = self.config.do_validation_augmentation

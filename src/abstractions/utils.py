@@ -91,7 +91,7 @@ class ConfigStruct:
         input_height (int): for resizing and model creation, this is input-height of your model's input and preprocessor's output
         input_width (int): for resizing and model creation, this is input-width of your model's input and preprocessor's output
         src_code_path (str): relative to project(repository)_dir,
-        data_dir (str): required for tests, provide absolute path to dataset, your data-loader should work using this path. you can provide a different dataset directory when submitting a training job.
+        data_dir (str): required for testing, provide absolute path to dataset, your data-loader should work using this path. you can provide a different dataset directory when submitting a training job.
         data_loader_class (str): Required, relative to `src_code_path`
         model_builder_class (str): Required, relative to `src_code_path`
         preprocessor_class (str): Required, relative to `src_code_path`

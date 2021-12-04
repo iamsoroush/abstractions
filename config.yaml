@@ -1,53 +1,53 @@
 # Global
 seed: 101
-input_height: 28 # For resizing and model creation
-input_width: 28 # For resizing and model creation
+input_height: 28 # For resizing and model creation (output of preprocessor and input of the model) - required for: testing
+input_width: 28 # For resizing and model creation (output of preprocessor and input of model) - required for: testing
 # n_channels must be set in code based on dataset and task
 
-src_code_path: 'src' # relative to project(repository)_dir
-
-data_dir: '/home/vafaeisa/scratch/datasets/mnist' # required for tests, provide absolute path to dataset, your data-loader should work using this path. you can provide a different dataset directory when submitting a training job
+src_code_path: 'src' # relative to project(repository)_dir -required for: orchestration, testing
+data_dir: '/home/vafaeisa/scratch/datasets/mnist' # Provide absolute path to dataset, your data-loader should work using this path. you can provide a different dataset directory when submitting a training job - required for: testing
 
 # Classes
-data_loader_class: dataset.DataLoader # Required, relative to `src_code_path`
-model_builder_class: models.ModelBuilder # Required, relative to `src_code_path`
-preprocessor_class: preprocessing.Preprocessror # Required, relative to `src_code_path`
-augmentor_class: augmentation.Augmentor # relative to `src_code_path`
-evaluator_class: evaluation.Evaluator # Required, relative to `src_code_path`
+data_loader_class: dataset.DataLoader # Relative to `src_code_path` - required for: orchestration, testing
+model_builder_class: models.ModelBuilder # Relative to `src_code_path` -required for: orchestration, testing
+preprocessor_class: preprocessing.Preprocessror # Relative to `src_code_path` - required for: orchestration, testing
+augmentor_class: augmentation.Augmentor # Relative to `src_code_path`
+evaluator_class: evaluation.Evaluator # Relative to `src_code_path` - required for: orchestration, testing
 
-# Epochs
+# Epochs - required for: orchestration, testing
 epochs: 30
 
-# Batch-size
+# Batch-size - required for: orchestration, testing
 batch_size: 8
 
-# Parameters for instantiating DataLoader
+# Parameters for instantiating your DataLoader
 data_loader:
+  # example:
   shuffle: True # on training data
 
-# Parameters for model-builder
+# Parameters for instantiating your ModelBuilder
 model_builder:
+  # example:
   optimizer:
     type: "adam"
     initial_lr: 0.0001
   loss_type: "binary_crossentropy"
 
-# Parameters for instantiating Preprocessor
+# Parameters for instantiating your Preprocessor
 preprocessor:
+  # example:
   normalization_type: null
 
-# Parameters for instantiating augmentation
-do_train_augmentation: True
+# Parameters for augmentation
+do_train_augmentation: False
 do_validation_augmentation: False
-augmentor:
+augmentor: # for instantiating your Augmentor
+  # example:
   rotation_proba: 0.5
   rotation_range: 45
   flip_proba: 0.5
 
-# Parameters for exporting, will be used by trainer
+# Parameters for exporting - required for: orchestration, testing
 export:
   metric: "val_loss"
   mode: "min"
-
-# MLFlow
-project_name: 'echo' # will be used as mlflow's experiment_name
