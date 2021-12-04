@@ -5,11 +5,11 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name='abstractions-aimedic',
-    version='0.1.8',
+    version='0.1.9',
     license='MIT',
     author='Soroush Moazed',
     author_email='soroush.moazed@gmail.com',
-    description="Abstractions for AIMedic's training components.",
+    description="Abstractions for AIMedic's training pipeline.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://gitlab.aimedic.co/soroush.moazed/abstractions.git",
@@ -17,9 +17,9 @@ setup(
             [console_scripts]
             submit=abstractions.submit_training_job:main
         ''',
-    # download_url="https://github.com/iamsoroush/abstractions/archive/refs/tags/v_0.1.6.tar.gz",
+    download_url="https://github.com/iamsoroush/abstractions/archive/refs/tags/v_0.1.9.tar.gz",
     classifiers=[
-            'Development Status :: 3 - Alpha',      # Chose either "3 - Alpha", "4 - Beta" or "5 - Production/Stable" as the current state of your package
+            'Development Status :: 3 - Beta',      # Chose either "3 - Alpha", "4 - Beta" or "5 - Production/Stable" as the current state of your package
             'Intended Audience :: Developers',      # Define that your audience are developers
             'Topic :: Software Development :: Build Tools',
             'License :: OSI Approved :: MIT License',   # Again, pick a license
