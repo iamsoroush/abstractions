@@ -74,7 +74,8 @@ def main():
         assert repo_root.is_dir(), f"{repo_root} is not a directory."
         train_script_path = repo_root.joinpath('scripts').joinpath('train.py')
 
-        run_dir = repo_root.joinpath('runs').joinpath(args.run_name)
+        run_name = args.run_name
+        run_dir = repo_root.joinpath('runs').joinpath(run_name)
         job_name = f'{repo_root.name}_{args.run_name}'
         branch = args.branch
         email = args.email
@@ -104,9 +105,9 @@ def main():
             f.write(f'git checkout -b {branch}\n')
 
             if data_dir is None:  # Use config.data_dir
-                f.write(f'python3 {train_script_path} --run_dir {run_dir}\n')
+                f.write(f'python3 {train_script_path} --run_name {run_name}\n')
             else:
-                f.write(f'python3 {train_script_path} --run_dir {run_dir} --data_dir {str(args.data_dir)}\n')
+                f.write(f'python3 {train_script_path} --run_name {run_name} --data_dir {str(args.data_dir)}\n')
 
             if do_commit:
                 f.write(f'cd {repo_root}\n')
