@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name='abstractions-aimedic',
-    version='0.1.9',
+    version='0.1.10',
     license='MIT',
     author='Soroush Moazed',
     author_email='soroush.moazed@gmail.com',

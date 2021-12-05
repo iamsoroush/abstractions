@@ -36,8 +36,7 @@ def parse_args():
     parser.add_argument('--branch',
                         type=str,
                         help='the branch you want to checkout',
-                        required=False,
-                        default='master')
+                        required=False)
 
     parser.add_argument('--hours',
                         type=int,
@@ -101,13 +100,14 @@ def main():
             f.write(f'#SBATCH --mail-user {email}\n\n')
 
             f.write(f'cd {repo_root}\n')
-            f.write(f'git fetch --all\n')
-            f.write(f'git checkout -b {branch}\n')
+            if branch is not None:
+                f.write(f'git fetch --all\n')
+                f.write(f'git checkout -b {branch}\n')
 
             if data_dir is None:  # Use config.data_dir
                 f.write(f'python3 {train_script_path} --run_name {run_name}\n')
             else:
-                f.write(f'python3 {train_script_path} --run_name {run_name} --data_dir {str(args.data_dir)}\n')
+                f.write(f'python3 {train_script_path} --run_name {run_name} --data_dir {str(data_dir)}\n')
 
             if do_commit:
                 f.write(f'cd {repo_root}\n')
