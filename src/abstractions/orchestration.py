@@ -6,6 +6,7 @@ import logging
 
 import mlflow
 import pandas as pd
+import tensorflow as tf
 import tensorflow.keras as tfk
 
 from . import DataLoaderBase, AugmentorBase, PreprocessorBase, ModelBuilderBase, Trainer, EvaluatorBase
@@ -16,7 +17,7 @@ from .abs_exceptions import *
 MLFLOW_TRACKING_URI = Path('/home').joinpath('vafaeisa').joinpath('mlruns')
 scratch_drive = Path('/home').joinpath('vafaeisa').joinpath('scratch')
 EVAL_REPORTS_DIR = scratch_drive.joinpath('eval_reports')
-# PROJECT_ROOT = Path(__file__).parent.parent
+# PROJECT_ROOT = Path(__file__).absolute().parent.parent
 
 
 class Orchestrator:
@@ -94,6 +95,9 @@ class Orchestrator:
 
         self.mlflow_tracking_uri = mlflow_tracking_uri
         self.logger.info(f'MLFLow tracking uri: {self.mlflow_tracking_uri}')
+
+        gpu_list = len(tf.config.list_physical_devices('GPU'))
+        self.logger.info(f'available GPU devices: {len(gpu_list)}')
 
     def run(self):
         """Train, export, evaluate."""
