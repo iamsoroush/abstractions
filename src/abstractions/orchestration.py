@@ -53,11 +53,12 @@ class Orchestrator:
                  project_root: Path,
                  eval_reports_dir: Path = EVAL_REPORTS_DIR,
                  mlflow_tracking_uri: Path = MLFLOW_TRACKING_URI):
+        self.logger = get_logger('orchestrator')
+
         self.project_root = project_root
         self.run_name = run_name
         self.run_dir = project_root.joinpath('runs').joinpath(run_name)
-
-        self.logger = get_logger('orchestrator')
+        self.logger.info(f'run directory: {self.run_dir}')
 
         config_path = check_for_config_file(self.run_dir)
         self.config = load_config_file(config_path.absolute())
@@ -67,6 +68,7 @@ class Orchestrator:
             self.data_dir = data_dir
         else:
             self.data_dir = Path(self.config.data_dir)
+        self.logger.info(f'data directory: {self.data_dir}')
 
         # load params
         self.project_name = self.project_root.name
@@ -77,6 +79,7 @@ class Orchestrator:
 
         self.eval_report_dir = eval_reports_dir.joinpath(self.project_name).joinpath(self.run_name)
         self.eval_report_dir.mkdir(parents=True, exist_ok=True)
+        self.logger.info(f'evaluation reports for this run: {self.eval_report_dir}')
 
         sys.path.append(str(self.src_code_path))
         self.logger.info(f'{self.src_code_path} has been added to system paths.')
@@ -90,6 +93,7 @@ class Orchestrator:
         self.evaluator = self._create_evaluator()
 
         self.mlflow_tracking_uri = mlflow_tracking_uri
+        self.logger.info(f'MLFLow tracking uri: {self.mlflow_tracking_uri}')
 
     def run(self):
         """Train, export, evaluate."""

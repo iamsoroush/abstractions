@@ -84,8 +84,8 @@ def main():
         data_dir = args.data_dir
 
         job_script_path = repo_root.joinpath(job_name + '.job')
-        err_log_path = run_dir.joinpath(f'log-{job_name}.out')
-        out_log_path = run_dir.joinpath(f'log-{job_name}.err')
+        err_log_path = run_dir.joinpath(f'log-{job_name}.err')
+        out_log_path = run_dir.joinpath(f'log-{job_name}.out')
 
         with open(job_script_path, 'w') as f:
             f.write('#!/bin/env bash\n\n')
