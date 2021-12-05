@@ -53,7 +53,7 @@ class Orchestrator:
                  data_dir: typing.Optional[Path],
                  project_root: Path,
                  eval_reports_dir: Path = EVAL_REPORTS_DIR,
-                 mlflow_tracking_uri: Path = MLFLOW_TRACKING_URI):
+                 mlflow_tracking_uri: typing.Union[str, Path] = MLFLOW_TRACKING_URI):
         self.logger = get_logger('orchestrator')
 
         self.project_root = project_root
@@ -96,7 +96,7 @@ class Orchestrator:
         self.mlflow_tracking_uri = mlflow_tracking_uri
         self.logger.info(f'MLFLow tracking uri: {self.mlflow_tracking_uri}')
 
-        gpu_list = len(tf.config.list_physical_devices('GPU'))
+        gpu_list = tf.config.list_physical_devices('GPU')
         self.logger.info(f'available GPU devices: {len(gpu_list)}')
 
     def run(self):
