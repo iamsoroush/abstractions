@@ -34,13 +34,15 @@ def setup_mlflow(mlflow_tracking_uri, mlflow_experiment_name: str,
     run_id = None
     run_id_path = base_dir.joinpath('run_id.txt')
     run_name = base_dir.name
+    nested = False
     if evaluation:
         run_name += '_evaluation'
+        nested = True
     elif run_id_path.exists():
         with open(run_id_path, 'r') as f:
             run_id = f.readline()
 
-    mlflow.set_tracking_uri(mlflow_tracking_uri)
+    # mlflow.set_tracking_uri(mlflow_tracking_uri)
     client = mlflow.tracking.MlflowClient(mlflow_tracking_uri)
 
     # Create new run if run_id does not exist
@@ -54,7 +56,7 @@ def setup_mlflow(mlflow_tracking_uri, mlflow_experiment_name: str,
         else:
             experiment_id = mlflow.create_experiment(mlflow_experiment_name)
 
-        active_run = mlflow.start_run(experiment_id=experiment_id, run_name=run_name)
+        active_run = mlflow.start_run(experiment_id=experiment_id, run_name=run_name, nested=nested)
 
     return active_run
 

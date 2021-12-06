@@ -14,9 +14,9 @@ from .utils import load_config_file, check_for_config_file, get_logger, setup_ml
 from .abs_exceptions import *
 
 
-MLFLOW_TRACKING_URI = Path('/home').joinpath('vafaeisa').joinpath('mlruns')
-scratch_drive = Path('/home').joinpath('vafaeisa').joinpath('scratch')
-EVAL_REPORTS_DIR = scratch_drive.joinpath('eval_reports')
+# MLFLOW_TRACKING_URI = Path('/home').joinpath('vafaeisa').joinpath('mlruns')
+# scratch_drive = Path('/home').joinpath('vafaeisa').joinpath('scratch')
+# EVAL_REPORTS_DIR = scratch_drive.joinpath('eval_reports')
 # PROJECT_ROOT = Path(__file__).absolute().parent.parent
 
 
@@ -52,8 +52,8 @@ class Orchestrator:
                  run_name: str,
                  data_dir: typing.Optional[Path],
                  project_root: Path,
-                 eval_reports_dir: Path = EVAL_REPORTS_DIR,
-                 mlflow_tracking_uri: typing.Union[str, Path] = MLFLOW_TRACKING_URI):
+                 eval_reports_dir: Path,
+                 mlflow_tracking_uri: typing.Union[str, Path]):
         self.logger = get_logger('orchestrator')
 
         self.project_root = project_root
@@ -96,6 +96,9 @@ class Orchestrator:
         self.mlflow_tracking_uri = mlflow_tracking_uri
         self.logger.info(f'MLFLow tracking uri: {self.mlflow_tracking_uri}')
 
+        # self.mlflow_artifact_uri = mlflow.get_artifact_uri()
+        # self.logger.info(f'MLFLow artifact uri: {self.mlflow_artifact_uri}')
+
         gpu_list = tf.config.list_physical_devices('GPU')
         self.logger.info(f'available GPU devices: {len(gpu_list)}')
 
@@ -122,13 +125,14 @@ class Orchestrator:
         self.logger.info('added preprocessing to data-generators')
 
         # training
-        mlflow_active_run = setup_mlflow(mlflow_tracking_uri=str(self.mlflow_tracking_uri),
-                                         mlflow_experiment_name=self.project_name,
-                                         base_dir=self.run_dir)
+        train_active_run = setup_mlflow(mlflow_tracking_uri=str(self.mlflow_tracking_uri),
+                                        mlflow_experiment_name=self.project_name,
+                                        base_dir=self.run_dir)
+        self.logger.info(f'mlflow artifact-store-url for training active-run: {mlflow.get_artifact_uri()}')
 
         self.logger.info('training started ...')
         self.trainer.train(model_builder=self.model_builder,
-                           active_run=mlflow_active_run,
+                           active_run=train_active_run,
                            train_data_gen=train_data_gen,
                            n_iter_train=n_iter_train,
                            val_data_gen=validation_data_gen,
@@ -141,22 +145,6 @@ class Orchestrator:
         # get ready for evaluation
         exported_model = tfk.models.load_model(self.trainer.exported_saved_model_path)
         self.logger.info(f'loaded {self.trainer.exported_saved_model_path}')
-        mlflow.end_run()
-        eval_active_run = setup_mlflow(mlflow_tracking_uri=str(self.mlflow_tracking_uri),
-                                       mlflow_experiment_name=self.project_name,
-                                       base_dir=self.run_dir,
-                                       evaluation=True)
-
-        # evaluate on evaluation data
-        self.logger.info('evaluating on evaluation data...')
-        eval_report = self.evaluator.evaluate(data_loader=self.data_loader,
-                                              preprocessor=self.preprocessor,
-                                              exported_model=exported_model,
-                                              active_run=eval_active_run)
-        eval_report_path = self._write_eval_reports(eval_report)
-        self.logger.info(f'wrote evaluation report to {eval_report_path}')
-        with eval_active_run:
-            mlflow.log_artifact(str(eval_report_path))
 
         # evaluate on validation data
         self.logger.info('evaluating on validation data...')
@@ -164,12 +152,31 @@ class Orchestrator:
         eval_report_validation = self.evaluator.validation_evaluate(data_loader=self.data_loader,
                                                                     preprocessor=self.preprocessor,
                                                                     exported_model=exported_model,
-                                                                    active_run=eval_active_run,
+                                                                    active_run=train_active_run,
                                                                     index=val_index)
 
         val_report_path = self.run_dir.joinpath("validation_report.csv")
         eval_report_validation.to_csv(val_report_path)
         self.logger.info(f'wrote evaluation (validation dataset) to {val_report_path}')
+        mlflow.log_artifact(str(val_report_path))
+
+        # evaluate on evaluation data
+        mlflow.end_run()
+        eval_active_run = setup_mlflow(mlflow_tracking_uri=str(self.mlflow_tracking_uri),
+                                       mlflow_experiment_name=self.project_name,
+                                       base_dir=self.run_dir,
+                                       evaluation=True)
+        self.logger.info(f'mlflow artifact-store-url for evaluation active-run: {mlflow.get_artifact_uri()}')
+
+        self.logger.info('evaluating on evaluation data...')
+        eval_report = self.evaluator.evaluate(data_loader=self.data_loader,
+                                              preprocessor=self.preprocessor,
+                                              exported_model=exported_model,
+                                              active_run=eval_active_run)
+        eval_report_path = self._write_eval_reports(eval_report)
+        self.logger.info(f'wrote evaluation report to {eval_report_path}')
+        # with eval_active_run:
+        mlflow.log_artifact(str(eval_report_path))
 
     def _create_data_loader(self) -> DataLoaderBase:
         try:

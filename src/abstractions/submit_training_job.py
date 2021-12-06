@@ -105,9 +105,9 @@ def main():
                 f.write(f'git checkout -b {branch}\n')
 
             if data_dir is None:  # Use config.data_dir
-                f.write(f'python3 {train_script_path} --run_name {run_name}\n')
+                f.write(f'train --run_name {run_name}\n --project_root {repo_root}\n')
             else:
-                f.write(f'python3 {train_script_path} --run_name {run_name} --data_dir {str(data_dir)}\n')
+                f.write(f'train --run_name {run_name} --data_dir {str(data_dir)} --project_root {repo_root}\n')
 
             if do_commit:
                 f.write(f'cd {repo_root}\n')

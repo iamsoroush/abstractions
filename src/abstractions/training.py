@@ -1,7 +1,7 @@
 import os
-import pathlib
 import yaml
 import shutil
+from pathlib import Path
 
 import tensorflow.keras as tfk
 import tensorflow.keras.callbacks as tfkc
@@ -25,7 +25,7 @@ class Trainer(BaseClass):
         self.export_mode = 'min'
 
     def __init__(self, config, run_dir):
-        self.run_dir = pathlib.Path(run_dir)
+        self.run_dir = Path(run_dir)
         super().__init__(config=config)
 
         # Paths
@@ -80,34 +80,37 @@ class Trainer(BaseClass):
         callbacks = self._get_callbacks(model_builder)
 
         # Run
-        with active_run as run:
-            # Add params from config file to mlflow
-            self._add_config_file_to_mlflow()
+        # with active_run as run:
+        # Add params from config file to mlflow
+        self._add_config_file_to_mlflow()
 
-            # Set dataset name as a tag
-            mlflow.set_tag("session_type", "training")  # ['hpo', 'evaluation', 'training']
+        # Set dataset name as a tag
+        mlflow.set_tag("session_type", "training")  # ['hpo', 'evaluation', 'training']
 
-            mlflow.tensorflow.autolog(every_n_iter=1,
-                                      log_models=False,
-                                      disable=False,
-                                      exclusive=False,
-                                      disable_for_unsupported_versions=False,
-                                      silent=False)
+        # Write run_id
+        self._write_mlflow_run_id(active_run)
 
-            # Write run_id
-            self._write_mlflow_run_id(run)
+        # Enable autolog
+        mlflow.tensorflow.autolog(every_n_iter=1,
+                                  log_models=False,
+                                  disable=False,
+                                  exclusive=False,
+                                  disable_for_unsupported_versions=True,
+                                  silent=False)
+        # mlflow.autolog(log_models=False)
+        # mlflow.keras.autolog(log_models=False)
 
-            # Fit
-            self.history_ = model.fit(train_data_gen,
-                                      steps_per_epoch=n_iter_train,
-                                      initial_epoch=initial_epoch,
-                                      epochs=self.epochs,
-                                      validation_data=val_data_gen,
-                                      validation_steps=n_iter_val,
-                                      class_weight=model_builder.get_class_weight(),
-                                      callbacks=callbacks)
+        # Fit
+        model.fit(train_data_gen,
+                  steps_per_epoch=n_iter_train,
+                  initial_epoch=initial_epoch,
+                  epochs=self.epochs,
+                  validation_data=val_data_gen,
+                  validation_steps=n_iter_val,
+                  class_weight=model_builder.get_class_weight(),
+                  callbacks=callbacks)
 
-    def export(self) -> pathlib.Path:
+    def export(self) -> Path:
         """Exports the best version of ``SavedModel`` s, and ``config.yaml`` file into exported sub_directory.
 
         This method will delete all checkpoints after exporting the best one.
@@ -275,8 +278,9 @@ class Trainer(BaseClass):
         str_params = param_extractor(data_map)
         params = {}
         for item in str_params:
-            name = item.split(':')[0]
+            name = f"config_{item.split(':')[0]}"
             item_value = item.split(': ')[-1]
+
             params[name] = item_value
 
         mlflow.log_params(params)

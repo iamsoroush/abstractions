@@ -117,9 +117,9 @@ class EvaluatorBase(BaseClass):
             metric_value = summary_report[c]['mean']
             test_metrics[metric_name] = metric_value
 
-        with active_run:
-            mlflow.set_tag("session_type", "evaluation")
-            mlflow.log_metrics(test_metrics)
+        # with active_run:
+        mlflow.set_tag("session_type", "evaluation")
+        mlflow.log_metrics(test_metrics)
 
     def _get_eval_report(self, data_gen, data_n, model):
         eval_funcs = self.get_eval_funcs()
