@@ -61,6 +61,20 @@ class PreprocessorBase(BaseClass):
         """
 
     @abstractmethod
+    def weight_preprocess(self, weight):
+        """Weight preprocessing logic. This won't be used for ``test-data-generator``.
+
+        Args:
+            weight: input label
+
+        Returns:
+            preprocessed weight -> ``tf.tensor`` or ``numpy.ndarray`` of shape
+
+                - segmentation -> ``(input_height, input_width, n_classes)``
+                - classification -> ``(n_classes,)`` or scalar ``class_id``
+        """
+
+    @abstractmethod
     def add_image_preprocess(self, generator):
         """Plugs input-image-preprocessing on top of the given ``generator``/``tf.Dataset``.
 
@@ -97,6 +111,26 @@ class PreprocessorBase(BaseClass):
 
         Returns:
             A ``generator``/``tf.data.Dataset`` with preprocessed ``y`` s, check ``self.label_preprocess`` for shapes
+
+        """
+
+    @abstractmethod
+    def add_weight_preprocess(self, generator):
+        """Plugs input-weight-preprocessing on top of the given ``generator``/``tf.Dataset``.
+
+        Notes:
+            - you have to do preprocessing on weight (``y``), keep input image and label preprocessing (if any) for ``self.add_image_preprocess`` and ``self.add_label_preprocess``.
+            - you have to use exactly the same logic that you define in ``self.weight_preprocess`` method. Consider using ``map`` method for ``tf.data.Dataset``, or {``map``function/``for`` loop} for vanilla ``Python generator``.
+
+        Args:
+            generator: a ``Python generator``/``tf.data.Dataset`` which yields a single data-point ``(x, y, sample_weight)`` in which
+
+                - ``x`` => input image,
+                - ``y`` => label, or segmentation map for segmentation
+                - ``sample_weight`` => float (classification/segmentation), or one-channel segmentation map (segmentation)
+
+        Returns:
+            A ``generator``/``tf.data.Dataset`` with preprocessed ``w`` s, check ``self.weight_preprocess`` for shapes
 
         """
 
@@ -153,6 +187,7 @@ class PreprocessorBase(BaseClass):
 
         gen = self.add_image_preprocess(generator)
         gen = self.add_label_preprocess(gen)
+        gen = self.add_weight_preprocess(gen)
         gen, n_iter = self.batchify(gen, n_data_points)
         return gen, n_iter
 
