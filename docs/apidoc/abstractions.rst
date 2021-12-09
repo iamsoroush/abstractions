@@ -68,6 +68,14 @@ abstractions.preprocessing module
    :undoc-members:
    :show-inheritance:
 
+abstractions.submit\_training\_job module
+-----------------------------------------
+
+.. automodule:: abstractions.submit_training_job
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 abstractions.training module
 ----------------------------
 

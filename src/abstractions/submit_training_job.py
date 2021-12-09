@@ -1,3 +1,5 @@
+#! /home/vafaeisa/miniconda3/bin/python
+
 import argparse
 import os
 from pathlib import Path
@@ -49,13 +51,19 @@ def parse_args():
                         type=int,
                         help='minimum required hours',
                         required=False,
-                        default=1)
+                        default=2)
 
     parser.add_argument('--mem',
                         type=int,
                         help='minimum required memory in megabytes',
                         required=False,
-                        default=8192)
+                        default=12288)
+
+    parser.add_argument('--n_cpu',
+                        type=int,
+                        help='cpus to use',
+                        required=False,
+                        default=1)
 
     return parser.parse_args()
 
@@ -80,6 +88,7 @@ def main():
         memory = args.mem
         hours = args.hours
         gpu_type = args.gpu_type
+        n_cpu = args.n_cpu
 
         data_dir = args.data_dir
         if data_dir is not None:
@@ -100,7 +109,17 @@ def main():
             f.write(f'#SBATCH --error {err_log_path}\n')
             f.write(f'#SBATCH --mem {memory}\n')
             f.write(f'#SBATCH --mail-user {email}\n')
+            f.write(f'#SBATCH --cpus-per-task={n_cpu}\n')
             f.write(f'#SBATCH --mail-type ALL\n\n')
+
+            # f.write(f'module load cuda/11.0\n')
+            # f.write(f'module load cudnn\n\n')
+
+            f.write('export CUDA_HOME=/cvmfs/soft.computecanada.ca/easybuild/software/2020/Core/cudacore/11.2.2\n')
+            f.write('export PATH=$CUDA_HOME/bin${PATH:+:${PATH}}\n')
+            # f.write('export LD_LIBRARY_PATH=$CUDA_HOME/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH\n\n')
+            f.write('export CUDA_HDIR=/cvmfs/soft.computecanada.ca/easybuild/software/2020/Core/cudacore/11.2.2\n')
+            f.write('export LD_LIBRARY_PATH=${CUDA_HOME}/nvvm/libdevice${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}\n\n')
 
             f.write(f'cd {project_root}\n')
 

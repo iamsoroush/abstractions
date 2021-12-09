@@ -83,6 +83,7 @@ class EvaluatorBase(BaseClass):
 
         val_data_gen, val_n = data_loader.create_validation_generator()
         val_data_gen = preprocessor.add_image_preprocess(val_data_gen)
+        val_data_gen = preprocessor.add_label_preprocess(val_data_gen)
 
         report_df = self._get_eval_report(val_data_gen, val_n, exported_model)
         self._log_to_mlflow(active_run, report_df, prefix='validation')

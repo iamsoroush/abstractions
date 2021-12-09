@@ -450,12 +450,36 @@ class TestEvaluation:
 
     @pytest.mark.dependency(depends=['TestInitializeComponents::test_initialize_evaluator',
                                      'TestPreprocessor::test_evaluation_gen_out'])
-    def test_eval_funcs(self, component_holder):
+    def test_eval_funcs_on_evaluation_gen(self, component_holder):
         evaluator = component_holder['evaluator']
         eval_funcs = evaluator.get_eval_funcs()
 
         compiled_model = component_holder['compiled_model']
         data_gen = component_holder['evaluation_data_gen']
+        x_b, y_b, _ = next(iter(data_gen))
+        x_sample = x_b[0]
+        y_sample = y_b[0]
+        y_pred = compiled_model.predict(np.expand_dims(x_sample, axis=0))[0]
+
+        failed_funcs = list()
+        for f_name, f in eval_funcs.items():
+            if not (isinstance(f_name, str) or isinstance(f, FunctionType)):
+                failed_funcs.append(f_name)
+            else:
+                try:
+                    f(y_sample, y_pred)
+                except Exception as e:
+                    failed_funcs.append(f_name)
+
+        if any(failed_funcs):
+            pytest.fail(f'failed {len(failed_funcs)}/{len(eval_funcs)}. failed funcs are {failed_funcs}')
+
+    def test_eval_funcs_on_validation_gen(self, component_holder):
+        evaluator = component_holder['evaluator']
+        eval_funcs = evaluator.get_eval_funcs()
+
+        compiled_model = component_holder['compiled_model']
+        data_gen = component_holder['validation_data_gen']
         x_b, y_b, _ = next(iter(data_gen))
         x_sample = x_b[0]
         y_sample = y_b[0]
@@ -494,7 +518,8 @@ class TestEvaluation:
 @pytest.mark.component
 class TestTraining:
 
-    @pytest.mark.dependency(depends=['TestEvaluation::test_eval_funcs'])
+    @pytest.mark.dependency(depends=['TestEvaluation::test_eval_funcs_on_evaluation_gen',
+                                     'TestEvaluation::test_eval_funcs_on_validation_gen'])
     def test_model_training(self, run_config, component_holder):
         """Simple model fit, with 3 batches per epoch, for 3 epochs."""
 
