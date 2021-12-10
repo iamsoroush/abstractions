@@ -61,7 +61,7 @@ class EvaluatorBase(BaseClass):
                             data_loader: DataLoaderBase,
                             preprocessor: PreprocessorBase,
                             exported_model: tfk.Model,
-                            active_run: mlflow.ActiveRun,
+                            active_run: typing.Optional[mlflow.ActiveRun],
                             index) -> pd.DataFrame:
         """Evaluates the model using ``eval_functions`` defined in ``get_eval_functions`` on validation dataset.
 
@@ -110,17 +110,19 @@ class EvaluatorBase(BaseClass):
 
     @staticmethod
     def _log_to_mlflow(active_run: mlflow.ActiveRun, report_df: pd.DataFrame, prefix='test'):
-        summary_report = report_df.describe()
+        if active_run is not None:
+            summary_report = report_df.describe()
 
-        test_metrics = {}
-        for c in summary_report.columns:
-            metric_name = f'{prefix}_{c}'
-            metric_value = summary_report[c]['mean']
-            test_metrics[metric_name] = metric_value
+            test_metrics = {}
+            for c in summary_report.columns:
+                metric_name = f'{prefix}_{c}'
+                metric_value = summary_report[c]['mean']
+                test_metrics[metric_name] = metric_value
 
-        # with active_run:
-        mlflow.set_tag("session_type", "evaluation")
-        mlflow.log_metrics(test_metrics)
+            # with active_run:
+
+            mlflow.set_tag("session_type", "evaluation")
+            mlflow.log_metrics(test_metrics)
 
     def _get_eval_report(self, data_gen, data_n, model):
         eval_funcs = self.get_eval_funcs()

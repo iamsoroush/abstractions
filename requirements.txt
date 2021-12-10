@@ -1,5 +1,5 @@
 tensorflow
-pandas>=1.2.4
+pandas
 scikit-learn>=0.24.1
 scikit-image>=0.18.1
 scipy>=1.6.2

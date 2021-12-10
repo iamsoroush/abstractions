@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name='abstractions-aimedic',
-    version='0.1.13',
+    version='0.1.14',
     license='MIT',
     author='Soroush Moazed',
     author_email='soroush.moazed@gmail.com',
@@ -31,7 +31,7 @@ setup(
     packages=find_packages(where="src"),
     install_requires=[
         'pyyaml',
-        'tensorflow>=2.5',
+        # 'tensorflow>=2.2',
         'tqdm',
         'pandas',
         'mlflow'
