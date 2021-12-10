@@ -16,6 +16,7 @@ def parse_args():
                         type=str,
                         help='absolute path to directory of the dataset',
                         required=False)
+
     parser.add_argument('--project_root',
                         type=str,
                         help='absolute path to the root of your project(repository)',

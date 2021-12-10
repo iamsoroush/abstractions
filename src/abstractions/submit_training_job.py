@@ -112,13 +112,13 @@ def main():
             f.write(f'#SBATCH --cpus-per-task={n_cpu}\n')
             f.write(f'#SBATCH --mail-type ALL\n\n')
 
-            # f.write(f'module load cuda/11.0\n')
+            # f.write(f'module load cuda/11.1.1\n')
             # f.write(f'module load cudnn\n\n')
 
-            f.write('export CUDA_HOME=/cvmfs/soft.computecanada.ca/easybuild/software/2020/Core/cudacore/11.2.2\n')
+            f.write('export CUDA_HOME=/cvmfs/soft.computecanada.ca/easybuild/software/2020/Core/cudacore/11.1.1\n')
             f.write('export PATH=$CUDA_HOME/bin${PATH:+:${PATH}}\n')
-            # f.write('export LD_LIBRARY_PATH=$CUDA_HOME/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH\n\n')
-            f.write('export CUDA_HDIR=/cvmfs/soft.computecanada.ca/easybuild/software/2020/Core/cudacore/11.2.2\n')
+            f.write('export LD_LIBRARY_PATH=$CUDA_HOME/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH\n\n')
+            f.write('export CUDA_DIR=/cvmfs/soft.computecanada.ca/easybuild/software/2020/Core/cudacore/11.1.1\n')
             f.write('export LD_LIBRARY_PATH=${CUDA_HOME}/nvvm/libdevice${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}\n\n')
 
             f.write(f'cd {project_root}\n')
