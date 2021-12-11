@@ -1,4 +1,3 @@
-#! /home/vafaeisa/miniconda3/bin/python
 
 import argparse
 import os
@@ -117,9 +116,9 @@ def main():
 
             f.write('export CUDA_HOME=/cvmfs/soft.computecanada.ca/easybuild/software/2020/Core/cudacore/11.1.1\n')
             f.write('export PATH=$CUDA_HOME/bin${PATH:+:${PATH}}\n')
-            f.write('export LD_LIBRARY_PATH=$CUDA_HOME/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH\n\n')
-            f.write('export CUDA_DIR=/cvmfs/soft.computecanada.ca/easybuild/software/2020/Core/cudacore/11.1.1\n')
-            f.write('export LD_LIBRARY_PATH=${CUDA_HOME}/nvvm/libdevice${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}\n\n')
+            f.write('LD_LIBRARY_PATH=$CUDA_HOME/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}\n\n')
+            # f.write('export CUDA_DIR=/cvmfs/soft.computecanada.ca/easybuild/software/2020/Core/cudacore/11.1.1\n')
+            # f.write('export LD_LIBRARY_PATH=${CUDA_HOME}/nvvm/libdevice${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}\n\n')
 
             f.write(f'cd {project_root}\n')
 

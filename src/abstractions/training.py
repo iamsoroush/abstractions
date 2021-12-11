@@ -36,9 +36,6 @@ class Trainer(BaseClass):
         self.exported_saved_model_path = self.exported_dir.joinpath('savedmodel')
         self.config_file_path = [i for i in self.run_dir.iterdir() if i.name.endswith('.yaml')][0]
 
-        # Raise exception if the best model is already exported.
-        self._check_for_exported()
-
         # Make logs and checkpoints directories
         self.checkpoints_dir.mkdir(exist_ok=True)
         self.tensorboard_log_dir.mkdir(exist_ok=True)
@@ -68,6 +65,9 @@ class Trainer(BaseClass):
             n_iter_val: ``validation_steps`` for ``model.fit``
 
         """
+
+        # Raise exception if the best model is already exported.
+        self._check_for_exported()
 
         # Create/load model and define initial_epoch
         if any(self._get_checkpoints()):

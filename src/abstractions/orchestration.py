@@ -131,16 +131,19 @@ class Orchestrator:
         self.logger.info(f'mlflow artifact-store-url for training active-run: {mlflow.get_artifact_uri()}')
 
         self.logger.info('training started ...')
-        self.trainer.train(model_builder=self.model_builder,
-                           active_run=train_active_run,
-                           train_data_gen=train_data_gen,
-                           n_iter_train=n_iter_train,
-                           val_data_gen=validation_data_gen,
-                           n_iter_val=n_iter_val)
-
-        # exporting
-        exported_dir = self.trainer.export()
-        self.logger.info(f'exported to {exported_dir}.')
+        try:
+            self.trainer.train(model_builder=self.model_builder,
+                               active_run=train_active_run,
+                               train_data_gen=train_data_gen,
+                               n_iter_train=n_iter_train,
+                               val_data_gen=validation_data_gen,
+                               n_iter_val=n_iter_val)
+        except ExportedExists as e:
+            self.logger.warning('model is already exported. skipping training and going for evaluation.')
+        else:
+            # exporting
+            exported_dir = self.trainer.export()
+            self.logger.info(f'exported to {exported_dir}.')
 
         # get ready for evaluation
         exported_model = tfk.models.load_model(self.trainer.exported_saved_model_path)
