@@ -35,7 +35,6 @@ class PreprocessorBase(BaseClass):
 
     """
 
-    @abstractmethod
     def image_preprocess(self, image):
         """Image preprocessing logic.
 
@@ -45,8 +44,8 @@ class PreprocessorBase(BaseClass):
         Returns:
             preprocessed image -> ``tf.tensor`` or ``numpy.ndarray`` of ``shape(input_height, input_width, n_channels)``
         """
+        pass
 
-    @abstractmethod
     def label_preprocess(self, label):
         """Label preprocessing logic.
 
@@ -59,8 +58,8 @@ class PreprocessorBase(BaseClass):
                 - segmentation -> ``(input_height, input_width, n_classes)``
                 - classification -> ``(n_classes,)`` or scalar ``class_id``
         """
+        pass
 
-    @abstractmethod
     def weight_preprocess(self, weight):
         """Weight preprocessing logic. This won't be used for ``test-data-generator``.
 
@@ -80,7 +79,7 @@ class PreprocessorBase(BaseClass):
 
         Notes:
             - you have to do preprocessing on image (``x``), keep label-preprocessing (if any) for ``self.add_label_preprocess``.
-            - you have to use exactly the same logic that you define in ``self.image_preprocess`` method. Consider using ``map`` method for ``tf.data.Dataset``, or {``map``function/``for`` loop} for vanilla ``Python generator``.
+            - consider using the same logic that you define in ``self.image_preprocess`` method. Consider using ``map`` method for ``tf.data.Dataset``, or {``map``function/``for`` loop} for vanilla ``Python generator``.
 
         Args:
             generator: a ``Python generator``/``tf.data.Dataset`` which yields a single data-point ``(x, y, sample_weight)`` or ``(x, y, data_id)`` if it is ``test_data_generator`` in which
@@ -100,7 +99,7 @@ class PreprocessorBase(BaseClass):
 
         Notes:
             - you have to do preprocessing on label (``y``), keep input-image-preprocessing (if any) for ``self.add_image_preprocess``.
-            - you have to use exactly the same logic that you define in ``self.label_preprocess`` method. Consider using ``map`` method for ``tf.data.Dataset``, or {``map``function/``for`` loop} for vanilla ``Python generator``.
+            - consider using the same logic that you define in ``self.label_preprocess`` method. Consider using ``map`` method for ``tf.data.Dataset``, or {``map``function/``for`` loop} for vanilla ``Python generator``.
 
         Args:
             generator: a ``Python generator``/``tf.data.Dataset`` which yields a single data-point ``(x, y, sample_weight)`` or ``(x, y, data_id)`` if it is ``test_data_generator`` in which
@@ -120,7 +119,7 @@ class PreprocessorBase(BaseClass):
 
         Notes:
             - you have to do preprocessing on weight (``y``), keep input image and label preprocessing (if any) for ``self.add_image_preprocess`` and ``self.add_label_preprocess``.
-            - you have to use exactly the same logic that you define in ``self.weight_preprocess`` method. Consider using ``map`` method for ``tf.data.Dataset``, or {``map``function/``for`` loop} for vanilla ``Python generator``.
+            - consider using exactly the same logic that you define in ``self.weight_preprocess`` method. Consider using ``map`` method for ``tf.data.Dataset``, or {``map``function/``for`` loop} for vanilla ``Python generator``.
 
         Args:
             generator: a ``Python generator``/``tf.data.Dataset`` which yields a single data-point ``(x, y, sample_weight)`` in which
