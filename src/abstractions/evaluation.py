@@ -4,6 +4,7 @@ from abc import abstractmethod
 import mlflow
 from tqdm import tqdm
 import typing
+import yaml
 
 import numpy as np
 import pandas as pd
@@ -48,13 +49,19 @@ class EvaluatorBase(BaseClass):
 
         """
 
+        def wrapper_gen(gen):
+            while True:
+                x_b, y_b, w_b = next(gen)
+                yield x_b, y_b
+
         # Internal metrics + loss
         test_data_gen, test_n = data_loader.create_test_generator()
         test_data_gen = preprocessor.add_image_preprocess(test_data_gen)
         test_data_gen = preprocessor.add_label_preprocess(test_data_gen)
         test_data_gen, n_iter_test = preprocessor.batchify(test_data_gen, test_n)
         eval_internal_metrics = dict()
-        for k, v in exported_model.evaluate(test_data_gen, steps=n_iter_test, return_dict=True).items():
+        for k, v in exported_model.evaluate(iter(wrapper_gen(iter(test_data_gen))),
+                                            steps=n_iter_test, return_dict=True).items():
             eval_internal_metrics[f'_model.evaluate_{k}'] = v
         self._log_metrics_to_mlflow(active_run, eval_internal_metrics, prefix='test')
 
@@ -195,13 +202,13 @@ class EvaluatorBase(BaseClass):
                         v.append(metric_val.numpy())
                     else:
                         v.append(metric_val)
-                    if hasattr(data_id, '__iter__'):
-                        indxs.append(data_id[0])
+                if hasattr(data_id, '__iter__'):
+                    indxs.append(data_id[0])
+                else:
+                    if isinstance(data_id, tf.Tensor):
+                        indxs.append(data_id.numpy())
                     else:
-                        if isinstance(data_id, tf.Tensor):
-                            indxs.append(data_id.numpy())
-                        else:
-                            indxs.append(data_id)
+                        indxs.append(data_id)
                 pbar.update(1)
 
         df = pd.DataFrame(report, index=indxs)

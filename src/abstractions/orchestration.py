@@ -5,12 +5,13 @@ from pydoc import locate
 import logging
 
 import mlflow
+import git
 import pandas as pd
 import tensorflow as tf
 import tensorflow.keras as tfk
 
 from . import DataLoaderBase, AugmentorBase, PreprocessorBase, ModelBuilderBase, Trainer, EvaluatorBase
-from .utils import load_config_file, check_for_config_file, get_logger, setup_mlflow, ConfigStruct
+from .utils import load_config_file, check_for_config_file, get_logger, setup_mlflow, ConfigStruct, add_config_file_to_mlflow
 from .abs_exceptions import *
 
 
@@ -57,13 +58,15 @@ class Orchestrator:
         self.logger = get_logger('orchestrator')
 
         self.project_root = project_root
+        repo = git.Repo(self.project_root, search_parent_directories=False)
+        self.code_version = repo.head.object.hexsha
         self.run_name = run_name
         self.run_dir = project_root.joinpath('runs').joinpath(run_name)
         self.logger.info(f'run directory: {self.run_dir}')
 
-        config_path = check_for_config_file(self.run_dir)
-        self.config = load_config_file(config_path.absolute())
-        self.logger.info(f'config file loaded: {config_path}')
+        self.config_path = check_for_config_file(self.run_dir)
+        self.config = load_config_file(self.config_path.absolute())
+        self.logger.info(f'config file loaded: {self.config_path}')
 
         if data_dir is not None:
             self.data_dir = data_dir
@@ -100,7 +103,7 @@ class Orchestrator:
         # self.logger.info(f'MLFLow artifact uri: {self.mlflow_artifact_uri}')
 
         gpu_list = tf.config.list_physical_devices('GPU')
-        self.logger.info(f'available GPU devices: {len(gpu_list)}')
+        self.logger.info(f'available GPU devices: {gpu_list}')
 
     def run(self):
         """Train, export, evaluate."""
@@ -125,12 +128,7 @@ class Orchestrator:
         self.logger.info('added preprocessing to data-generators')
 
         # training
-        train_active_run = setup_mlflow(mlflow_tracking_uri=str(self.mlflow_tracking_uri),
-                                        mlflow_experiment_name=self.project_name,
-                                        base_dir=self.run_dir)
-        mlflow.set_tag("session_type", "training")  # ['hpo', 'evaluation', 'training']
-
-        self.logger.info(f'mlflow artifact-store-url for training active-run: {mlflow.get_artifact_uri()}')
+        train_active_run = self._setup_mlflow_active_run(is_evaluation=False)
 
         self.logger.info('training started ...')
         try:
@@ -141,7 +139,7 @@ class Orchestrator:
                                val_data_gen=validation_data_gen,
                                n_iter_val=n_iter_val)
         except ExportedExists as e:
-            self.logger.warning('model is already exported. skipping training and going for evaluation.')
+            self.logger.warning('model is already exported. skipping training and starting evaluation...')
         else:
             # exporting
             exported_dir = self.trainer.export()
@@ -189,7 +187,6 @@ class Orchestrator:
         """Just evaluate. if exported exists, evaluate on exported, else evaluate on the best checkpoint."""
         pass  # TODO: write the evaluate method for orcehstrator, and the evaluate entry point which uses evaluate.py
 
-
     def _evaluate(self, train_active_run):
         # get ready for evaluation
         exported_model = tfk.models.load_model(self.trainer.exported_saved_model_path)
@@ -210,14 +207,7 @@ class Orchestrator:
         mlflow.log_artifact(str(val_report_path))
 
         # evaluate on evaluation data
-        mlflow.end_run()
-        eval_active_run = setup_mlflow(mlflow_tracking_uri=str(self.mlflow_tracking_uri),
-                                       mlflow_experiment_name=self.project_name,
-                                       base_dir=self.run_dir,
-                                       evaluation=True)
-        mlflow.set_tag("session_type", "evaluation")  # ['hpo', 'evaluation', 'training']
-
-        self.logger.info(f'mlflow artifact-store-url for evaluation active-run: {mlflow.get_artifact_uri()}')
+        eval_active_run = self._setup_mlflow_active_run(is_evaluation=True)
 
         self.logger.info('evaluating on evaluation data...')
         eval_report = self.evaluator.evaluate(data_loader=self.data_loader,
@@ -228,6 +218,25 @@ class Orchestrator:
         self.logger.info(f'wrote evaluation report to {eval_report_path}')
         # with eval_active_run:
         mlflow.log_artifact(str(eval_report_path))
+        mlflow.end_run()
+
+    def _setup_mlflow_active_run(self, is_evaluation):
+        mlflow.end_run()
+        active_run = setup_mlflow(mlflow_tracking_uri=str(self.mlflow_tracking_uri),
+                                  mlflow_experiment_name=self.project_name,
+                                  base_dir=self.run_dir,
+                                  evaluation=is_evaluation)
+        sess_type = 'training'
+        if is_evaluation:
+            sess_type = 'evaluation'
+        mlflow.set_tag("session_type", sess_type)  # ['hpo', 'evaluation', 'training']
+        add_config_file_to_mlflow(self.config_path)
+        mlflow.log_param('project name', self.project_name)
+        mlflow.log_param('run name', self.run_name)
+        mlflow.log_param('code version', self.code_version)
+
+        self.logger.info(f'mlflow artifact-store-url for {sess_type} active-run: {mlflow.get_artifact_uri()}')
+        return active_run
 
     def _create_data_loader(self) -> DataLoaderBase:
         try:

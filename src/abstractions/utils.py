@@ -61,6 +61,41 @@ def setup_mlflow(mlflow_tracking_uri, mlflow_experiment_name: str,
     return active_run
 
 
+def add_config_file_to_mlflow(config_file_path):
+    """Adds parameters from config file to mlflow.
+    """
+
+    def param_extractor(dictionary):
+
+        """Returns a list of each item formatted like 'trainer.mlflow.tracking_uri: /tracking/uri' """
+
+        values = []
+        if dictionary is None:
+            return values
+
+        for key, value in dictionary.items():
+            if isinstance(value, dict):
+                items_list = param_extractor(value)
+                for i in items_list:
+                    values.append(f'{key}.{i}')
+            else:
+                values.append(f'{key}: {value}')
+        return values
+
+    with open(config_file_path) as file:
+        data_map = yaml.safe_load(file)
+
+    str_params = param_extractor(data_map)
+    params = {}
+    for item in str_params:
+        name = f"config_{item.split(':')[0]}"
+        item_value = item.split(': ')[-1]
+
+        params[name] = item_value
+
+    mlflow.log_params(params)
+
+
 def check_for_config_file(run_dir: pathlib.Path) -> pathlib.Path:
     """Checks for existence of config file and returns the path to config file if exists.
 
