@@ -84,9 +84,6 @@ class Trainer(BaseClass):
         # Add params from config file to mlflow
         self._add_config_file_to_mlflow()
 
-        # Set dataset name as a tag
-        mlflow.set_tag("session_type", "training")  # ['hpo', 'evaluation', 'training']
-
         # Write run_id
         self._write_mlflow_run_id(active_run)
 

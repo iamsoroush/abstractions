@@ -128,6 +128,8 @@ class Orchestrator:
         train_active_run = setup_mlflow(mlflow_tracking_uri=str(self.mlflow_tracking_uri),
                                         mlflow_experiment_name=self.project_name,
                                         base_dir=self.run_dir)
+        mlflow.set_tag("session_type", "training")  # ['hpo', 'evaluation', 'training']
+
         self.logger.info(f'mlflow artifact-store-url for training active-run: {mlflow.get_artifact_uri()}')
 
         self.logger.info('training started ...')
@@ -145,6 +147,50 @@ class Orchestrator:
             exported_dir = self.trainer.export()
             self.logger.info(f'exported to {exported_dir}.')
 
+        self._evaluate(train_active_run)
+
+        # # get ready for evaluation
+        # exported_model = tfk.models.load_model(self.trainer.exported_saved_model_path)
+        # self.logger.info(f'loaded {self.trainer.exported_saved_model_path}')
+        #
+        # # evaluate on validation data
+        # self.logger.info('evaluating on validation data...')
+        # val_index = self.data_loader.get_validation_index()
+        # eval_report_validation = self.evaluator.validation_evaluate(data_loader=self.data_loader,
+        #                                                             preprocessor=self.preprocessor,
+        #                                                             exported_model=exported_model,
+        #                                                             active_run=train_active_run,
+        #                                                             index=val_index)
+        #
+        # val_report_path = self.run_dir.joinpath("validation_report.csv")
+        # eval_report_validation.to_csv(val_report_path)
+        # self.logger.info(f'wrote evaluation (validation dataset) to {val_report_path}')
+        # mlflow.log_artifact(str(val_report_path))
+        #
+        # # evaluate on evaluation data
+        # mlflow.end_run()
+        # eval_active_run = setup_mlflow(mlflow_tracking_uri=str(self.mlflow_tracking_uri),
+        #                                mlflow_experiment_name=self.project_name,
+        #                                base_dir=self.run_dir,
+        #                                evaluation=True)
+        # self.logger.info(f'mlflow artifact-store-url for evaluation active-run: {mlflow.get_artifact_uri()}')
+        #
+        # self.logger.info('evaluating on evaluation data...')
+        # eval_report = self.evaluator.evaluate(data_loader=self.data_loader,
+        #                                       preprocessor=self.preprocessor,
+        #                                       exported_model=exported_model,
+        #                                       active_run=eval_active_run)
+        # eval_report_path = self._write_eval_reports(eval_report)
+        # self.logger.info(f'wrote evaluation report to {eval_report_path}')
+        # # with eval_active_run:
+        # mlflow.log_artifact(str(eval_report_path))
+
+    def evaluate(self):
+        """Just evaluate. if exported exists, evaluate on exported, else evaluate on the best checkpoint."""
+        pass  # TODO: write the evaluate method for orcehstrator, and the evaluate entry point which uses evaluate.py
+
+
+    def _evaluate(self, train_active_run):
         # get ready for evaluation
         exported_model = tfk.models.load_model(self.trainer.exported_saved_model_path)
         self.logger.info(f'loaded {self.trainer.exported_saved_model_path}')
@@ -169,6 +215,8 @@ class Orchestrator:
                                        mlflow_experiment_name=self.project_name,
                                        base_dir=self.run_dir,
                                        evaluation=True)
+        mlflow.set_tag("session_type", "evaluation")  # ['hpo', 'evaluation', 'training']
+
         self.logger.info(f'mlflow artifact-store-url for evaluation active-run: {mlflow.get_artifact_uri()}')
 
         self.logger.info('evaluating on evaluation data...')
