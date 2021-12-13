@@ -330,10 +330,9 @@ Note that shuffling is done only for training-data-generator.
 Next, we will define our preprocessing logic inside `Preprocessor` module. Note that we don't have any augmentations here, you can get more info about `Augmentor` [here](https://abstractions.readthedocs.io/en/latest/apidoc/abstractions.html#module-abstractions.augmentor).
 
 By sub-classing `PreprocessorBase`, we must define
-- `image_preprocess`
-- `label_preprocess`
 - `add_image_preprocess`
 - `add_label_preprocess`
+- `add_weight_preprocess`
 - `batchify`
 
 Under the hood, orchestrator will try to call `add_preprocess` method of `Preprocessor`, which is:
@@ -341,6 +340,7 @@ Under the hood, orchestrator will try to call `add_preprocess` method of `Prepro
 ```python
 gen = self.add_image_preprocess(generator)
 gen = self.add_label_preprocess(gen)
+gen = self.add_weight_preprocess(gen)
 gen, n_iter = self.batchify(gen, n_data_points)
 return gen, n_iter
 ```
@@ -356,6 +356,20 @@ from abstractions import PreprocessorBase
 from abstractions.utils import ConfigStruct
 
 class PreprocessorTF(PreprocessorBase):
+    def add_image_preprocess(self, generator):
+        return generator.map(self._wrapper_image_preprocess)
+
+    def add_label_preprocess(self, generator):
+        return generator
+    
+    def add_weight_preprocess(self, generator):
+      return generator
+    
+    def batchify(self, generator, n_data_points):
+        gen = generator.batch(self.batch_size).repeat()
+        n_iter = n_data_points // self.batch_size + int((n_data_points % self.batch_size) > 0)
+        return gen, n_iter
+  
     def image_preprocess(self, image):
         return tf.reshape(image, (self.input_h * self.input_w,)) / self.normalize_by
 
@@ -365,17 +379,6 @@ class PreprocessorTF(PreprocessorBase):
 
     def label_preprocess(self, label):
         return label
-
-    def add_image_preprocess(self, generator):
-        return generator.map(self._wrapper_image_preprocess)
-
-    def add_label_preprocess(self, generator):
-        return generator
-
-    def batchify(self, generator, n_data_points):
-        gen = generator.batch(self.batch_size).repeat()
-        n_iter = n_data_points // self.batch_size + int((n_data_points % self.batch_size) > 0)
-        return gen, n_iter
 
     def _load_params(self, config: ConfigStruct):
         self.normalize_by = config.preprocessor.normalize_by
@@ -558,10 +561,9 @@ Note that shuffling is done only for training data generator.
 Next, we will define our preprocessing logic inside `Preprocessor` module. Note that we don't have any augmentor's here, you can get more info about `Augmentor` [here](https://abstractions.readthedocs.io/en/latest/apidoc/abstractions.html#module-abstractions.augmentor).
 
 By sub-classing `PreprocessorBase`, we must define
-- `image_preprocess`
-- `label_preprocess`
 - `add_image_preprocess`
 - `add_label_preprocess`
+- `add_weight_preprocess`
 - `batchify`
 
 Under the hood, orchestrator will try to call `add_preprocess` method of `Preprocessor` which is:
@@ -569,6 +571,7 @@ Under the hood, orchestrator will try to call `add_preprocess` method of `Prepro
 ```python
 gen = self.add_image_preprocess(generator)
 gen = self.add_label_preprocess(gen)
+gen = self.add_weight_preprocess(gen)
 gen, n_iter = self.batchify(gen, n_data_points)
 return gen, n_iter
 ```
@@ -584,28 +587,25 @@ from abstractions import PreprocessorBase
 
 
 class Preprocessor(PreprocessorBase):
-
-    def image_preprocess(self, image):
-        return np.reshape(image, (self.input_h * self.input_w)) / self.normalize_by
-
-    def label_preprocess(self, label):
-        return label
-
+  
     def add_image_preprocess(self, generator):
         while True:
             x, y, w = next(generator)
             yield self.image_preprocess(x), y, w
 
     def add_label_preprocess(self, generator):
-        while True:
-            x, y, w = next(generator)
-            yield x, self.label_preprocess(y), w
-        # return generator
+        return generator
+        
+    def add_weight_preprocess(self, generator):
+      return generator
 
     def batchify(self, generator, n_data_points):
         n_iter = n_data_points // self.batch_size + int((n_data_points % self.batch_size) > 0)
         gen = self._batch_gen(generator, self.batch_size)
         return gen, n_iter
+
+    def image_preprocess(self, image):
+        return np.reshape(image, (self.input_h * self.input_w)) / self.normalize_by
 
     @staticmethod
     def _batch_gen(generator, batch_size):
@@ -661,19 +661,21 @@ Your config file should follow a convention:
 
 - `input_height`: 28
 - `input_width`: 28
-- `src_code_path`: 'src' # required, location of your source code relative to repository's root
-- `data_loader_class`: 'dataset.DataLoaderTF' # required
-- `preprocessor_class`: 'preprocessing.PreprocessorTF' # required
-- `model_builder_class`: 'models.ModelBuilder' # required
-- `evaluator_class`: 'evaluator_class: evaluation.Evaluator' # required
-- `epochs`: 10 # required
-- `batch_size`: 8 # required
+- `src_code_path`: 'src'
+- `data_dir`: /content/datasets/mnist
+
+- `data_loader_class`: dataset.DataLoaderTF
+- `preprocessor_class`: preprocessing.PreprocessorTF
+- `model_builder_class`: models.ModelBuilder
+- `evaluator_class`: evaluator_class: evaluation.Evaluator
+- `epochs`: 10
+- `batch_size`: 8
 
 - `data_loader`:
-    - `shuffle`: True # on training data
+    - `shuffle`: True
 
 - `model_builder`:
-    - `name`: "baseline-unet"
+    - `name`: "baseline-conv2d"
     - `activation`: 'relu'
     - `n_filters`: 512
     - `dropout_rate`: 0.2
@@ -684,8 +686,5 @@ Your config file should follow a convention:
 - `export`: # required
     - `metric`: "val_loss"
     - `mode`: "min"
-
-- `project_name`: 'mnist' # required, will be used as mlflow's experiment_name
-
 
 Put your config inside `repo_root/runs/run_name`, push your code, and now you can request for a training session.
