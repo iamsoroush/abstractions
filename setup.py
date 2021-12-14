@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name='abstractions-aimedic',
-    version='0.1.15',
+    version='0.1.16',
     license='MIT',
     author='Soroush Moazed',
     author_email='soroush.moazed@gmail.com',
@@ -17,6 +17,7 @@ setup(
             [console_scripts]
             submit=abstractions.submit_training_job:main
             train=abstractions.train:main
+            evaluate=abstractions.evalaute:main
         ''',
     download_url="https://github.com/iamsoroush/abstractions/archive/refs/tags/v_0.1.9.tar.gz",
     classifiers=[
