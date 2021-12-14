@@ -5,7 +5,7 @@ from .orchestration import Orchestrator
 
 
 def parse_args():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description='train, export and evaluate the run')
 
     parser.add_argument('--run_name',
                         type=str,
