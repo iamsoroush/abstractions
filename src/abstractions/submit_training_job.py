@@ -18,7 +18,7 @@ if mj is not None:
 
 
 def parse_args():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description='submit a training job for a run')
 
     parser.add_argument('--project_root',
                         type=str,
