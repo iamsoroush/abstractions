@@ -169,7 +169,7 @@ class EvaluatorBase(EvalBase, ABC):
         if index is None:
             index = list(range(val_n))
 
-        data_gen = iter(wrapper_gen_dot_predict(val_data_gen, index))
+        data_gen = iter(wrapper_gen_dot_predict(iter(val_data_gen), index))
         # preds, gts, _ = self._get_model_outputs(exported_model, val_data_gen, n_iter_val)
         preds, gts, data_ids = model.predict(data_gen, n_iter_val)
         report_df = self._generate_eval_reports(preds, gts, data_ids)
