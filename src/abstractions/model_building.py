@@ -13,8 +13,8 @@ from .base_class import BaseClass
 
 class MBBase(BaseClass):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, config):
+        super().__init__(config=config)
         self.model_ = None
 
     @abstractmethod
@@ -34,7 +34,7 @@ class MBBase(BaseClass):
     @abstractmethod
     def predict(self,
                 data_gen: typing.Iterator,
-                n_iter: int) -> typing.List[typing.Union[np.ndarray, tf.Tensor],
+                n_iter: int) -> typing.Tuple[typing.Union[np.ndarray, tf.Tensor],
                                             typing.Union[np.ndarray, tf.Tensor],
                                             typing.Union[np.ndarray, tf.Tensor, list]]:
         """Predict on a data generator which generates batches of data in each iteration.
@@ -49,6 +49,10 @@ class MBBase(BaseClass):
             - labels: labels for each data-sample, has the same shape as ``predictions``
             - data_ids: data-id for each sample, of ``shape(n_samples,)``
         """
+
+    @abstractmethod
+    def load(self, exported_path: Path):
+        pass
 
 
 class ModelBuilderBase(MBBase):
@@ -129,6 +133,9 @@ class ModelBuilderBase(MBBase):
         self._wrap_pred_step()
         preds, gts, third_element = self.model.predict(data_gen, steps=n_iter)
         return preds, gts, third_element
+
+    def load(self, exported_path: Path) -> tfk.Model:
+        return tfk.models.load_model(exported_path)
 
     def _wrap_pred_step(self):
         """Overrides the ``predict`` method of the ``tfk.Model`` model.
@@ -218,7 +225,13 @@ class GenericModelBuilderBase(MBBase):
 
         """
 
-        joblib.dump(model, exported_dir.joinpath('exported.joblib'))
+        export_file = exported_dir.joinpath('model.joblib')
+        joblib.dump(model, str(export_file))
+
+    def load(self, exported_dir: Path) -> BaseEstimator:
+        export_file = exported_dir.joinpath('model.joblib')
+        loaded = joblib.load(str(export_file))
+        return loaded
 
     @abstractmethod
     def predict(self,

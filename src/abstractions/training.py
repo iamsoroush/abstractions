@@ -51,6 +51,10 @@ class TrainerBase(BaseClass, ABC):
     def export(self, model_builder: MBBase):
         pass
 
+    @abstractmethod
+    def load_exported(self, model_builder: MBBase):
+        pass
+
 
 class Trainer(TrainerBase):
     """Trainer for ``tensorflow.keras`` models."""
@@ -144,7 +148,7 @@ class Trainer(TrainerBase):
                   class_weight=model_builder.get_class_weight(),
                   callbacks=callbacks)
 
-    def export(self, model_builder):
+    def export(self, model_builder: ModelBuilderBase):
         """Exports the best version of ``SavedModel`` s, and ``config.yaml`` file into exported sub_directory.
 
         This method will delete all checkpoints after exporting the best one.
@@ -163,6 +167,10 @@ class Trainer(TrainerBase):
 
         # Load the exported SavedModel
         exported_model = tfk.models.load_model(self.exported_saved_model_path)
+        model_builder.model = exported_model
+
+    def load_exported(self, model_builder: ModelBuilderBase):
+        exported_model = model_builder.load(self.exported_saved_model_path)
         model_builder.model = exported_model
 
     def _get_callbacks(self, model_builder: ModelBuilderBase):
@@ -333,3 +341,7 @@ class GenericTrainer(TrainerBase):
         exported_config_path = self.exported_dir.joinpath('config.yaml')
         shutil.copy(self.config_file_path, exported_config_path)
         model_builder.export(self.exported_dir, model_builder.model)
+
+    def load_exported(self, model_builder: GenericModelBuilderBase):
+        loaded = model_builder.load(self.exported_dir)
+        model_builder.model = loaded

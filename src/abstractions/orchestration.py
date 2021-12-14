@@ -123,6 +123,7 @@ class Orchestrator:
             self.trainer._check_for_exported()
         except ExportedExists as e:
             train_active_run = self._setup_mlflow_active_run(is_evaluation=False)
+            self.trainer.load_exported(self.model_builder)
             self._evaluate(train_active_run)
         else:
             raise Exception(f'exported does not exist at {self.trainer.exported_dir}')
@@ -169,7 +170,7 @@ class Orchestrator:
 
         # get ready for evaluation
         # exported_model = tfk.models.load_model(self.trainer.exported_saved_model_path)
-        self.logger.info(f'evaluation will be done using this model: {self.trainer.exported_saved_model_path}')
+        self.logger.info(f'evaluation will be done using this model: {self.trainer.exported_dir}')
 
         # evaluate on validation data
         self.logger.info('evaluating on validation data...')
