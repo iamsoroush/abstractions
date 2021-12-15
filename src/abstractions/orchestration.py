@@ -160,6 +160,7 @@ class Orchestrator:
                                n_iter_val=n_iter_val)
         except ExportedExists as e:
             self.logger.warning('model is already exported. skipping training and starting evaluation...')
+            self.trainer.load_exported(self.model_builder)
         else:
             # exporting
             self.trainer.export(model_builder=self.model_builder)
@@ -170,7 +171,7 @@ class Orchestrator:
 
         # get ready for evaluation
         # exported_model = tfk.models.load_model(self.trainer.exported_saved_model_path)
-        self.logger.info(f'evaluation will be done using this model: {self.trainer.exported_dir}')
+        self.logger.info(f'evaluation will be done on this model: {self.trainer.exported_dir}')
 
         # evaluate on validation data
         self.logger.info('evaluating on validation data...')

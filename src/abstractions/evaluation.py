@@ -167,7 +167,9 @@ class EvaluatorBase(EvalBase, ABC):
         val_data_gen, val_n = data_loader.create_validation_generator()
         val_data_gen, n_iter_val = preprocessor.add_preprocess(val_data_gen, n_data_points=val_n)
         if index is None:
-            index = list(range(val_n))
+            index = np.array([[i] for i in range(val_n)])
+        elif np.array(index).ndim != 2:
+            index = np.array([[i] for i in index])
 
         data_gen = iter(wrapper_gen_dot_predict(iter(val_data_gen), index))
         # preds, gts, _ = self._get_model_outputs(exported_model, val_data_gen, n_iter_val)
@@ -258,13 +260,23 @@ class EvaluatorBase(EvalBase, ABC):
                         v.append(metric_val.numpy())
                     else:
                         v.append(metric_val)
-                if hasattr(data_id, '__iter__'):
-                    indxs.append(data_id[0])
+
+                if np.array(data_id).ndim > 0:
+                    d_id = str(data_id)
                 else:
-                    if isinstance(data_id, tf.Tensor):
-                        indxs.append(data_id.numpy())
-                    else:
-                        indxs.append(data_id)
+                    d_id = data_id
+                if isinstance(d_id, tf.Tensor):
+                    indxs.append(d_id.numpy())
+                else:
+                    indxs.append(d_id)
+
+                # if hasattr(data_id, '__iter__'):
+                #     indxs.append(data_id[0])
+                # else:
+                # if isinstance(data_id, tf.Tensor):
+                #     indxs.append(data_id.numpy())
+                # else:
+                #     indxs.append(data_id)
                 pbar.update(1)
 
         df = pd.DataFrame(report, index=indxs)
