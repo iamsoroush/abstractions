@@ -17,17 +17,18 @@ setup(
             [console_scripts]
             submit=abstractions.submit_training_job:main
             train=abstractions.train:main
-            evaluate=abstractions.evalaute:main
+            evaluate=abstractions.evaluate:main
         ''',
     download_url="https://github.com/iamsoroush/abstractions/archive/refs/tags/v_0.1.9.tar.gz",
     classifiers=[
-            'Development Status :: 4 - Beta',      # Chose either "3 - Alpha", "4 - Beta" or "5 - Production/Stable" as the current state of your package
-            'Intended Audience :: Developers',      # Define that your audience are developers
-            'Topic :: Software Development :: Build Tools',
-            'License :: OSI Approved :: MIT License',   # Again, pick a license
-            "Programming Language :: Python :: 3",
-            "Operating System :: OS Independent",
-        ],
+        'Development Status :: 4 - Beta',
+        # Chose either "3 - Alpha", "4 - Beta" or "5 - Production/Stable" as the current state of your package
+        'Intended Audience :: Developers',  # Define that your audience are developers
+        'Topic :: Software Development :: Build Tools',
+        'License :: OSI Approved :: MIT License',  # Again, pick a license
+        "Programming Language :: Python :: 3",
+        "Operating System :: OS Independent",
+    ],
     package_dir={"": "src"},
     packages=find_packages(where="src"),
     install_requires=[
