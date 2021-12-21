@@ -5,7 +5,7 @@ Install `abstractions`:
 
 
 ```shell
-pip install pip install abstractions-aimedic
+pip install abstractions-aimedic
 ```
 
 Download mnist and re-structure the data:
