@@ -9,12 +9,12 @@ class DataLoaderBase(BaseClass):
     """Data-loading mechanism.
 
     This class will create data generators.
-    This is actually the process of ingesting data from a data source into lists of ``np.Array`` or ``tf.Tensor``,
+    This is actually the process of ingesting data from a data source into lists of ``np.ndarray`` or ``tf.Tensor``,
     without any pre-processing(numerical manipulation of data).
 
     Notes:
         - Output of train/validation generators will be a tuple of (image, label/segmentation_map, sample_weight). If you don't need ``sample_weight``, set it to ``1`` for all data-points.
-        - Output of test generator will be a tupple of (image, label/segmentation_map, data_id). Each ``data_id`` could be anything specific that can help to retrieve this data point. You can consider to set ``data_id=row_id`` of the test subset's dataframe, if you are have one.
+        - Output of test generator will be a tupple of (image, label/segmentation_map, data_id). Each ``data_id`` could be anything specific that can help to retrieve this data point. You can consider to set ``data_id=row_id`` of the test subset's dataframe, if you have one.
         - You can use the third argument with weighted metrics, or for weighted custom loss functions.
 
     Attributes:
