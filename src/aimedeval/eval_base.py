@@ -24,41 +24,41 @@ class EvalFunc:
 
 class SegEvalFunc(EvalFunc):
 
-    def expected_shape(self) -> typing.Tuple[typing.Union[str, int]]:
+    ## input and output type: numpy, no batch
+
+    def expected_shape(self) -> typing.Tuple[str]:
         """function expects y_true and y_pred to be in this shape.
 
-         For example, if your eval-func expects a one-channel binary segmentation map: ``('height', 'width', 1)``, or
-         if you expect batches, return ``('batch_size', 'height', 'width', 1)``
+         For example, if your eval-func expects a one-channel binary segmentation map: ``('height', 'width', 1)``
          """
 
         ret = list()
-        if self.expects_batch:
-            ret.append('batch')
+
         ret.append('height')
         ret.append('width')
-        n_channels = self.expected_seg_map_channels
-        if n_channels is not None:
-            ret.append(n_channels)
+        if self.expects_multi_channel_seg_maps:
+            ret.append('n_classes')
         return tuple(ret)
 
     @abstractmethod
     @property
-    def expected_seg_map_channels(self) -> typing.Optional[int]:
-        """return ``None`` if you expect something like (batch, h, w), and return num-channels if you expect something like (batch, h, w, 1) """
+    def expects_multi_channel_seg_maps(self) -> bool:
+        """return ``True`` if your metric expects something like (h, w, n), and ``False`` if you expect binary maps which
+         have 2 dimensions, i.e (h, w)"""
         pass
 
-    @abstractmethod
-    @property
-    def expects_batch(self) -> bool:
-        """If this function expects batches of data, i.e. the first dimension is ``batch-size``"""
-
-        pass
-
-    @abstractmethod
-    @property
-    def expected_input_type(self) -> str:
-        """if your functions assumes that the y_pred and y_true are:
-            numpy array -> return ``'np'``
-            tensorflow tensor -> return ``'tf'``
-        """
-        pass
+    # @abstractmethod
+    # @property
+    # def expects_batch(self) -> bool:
+    #     """If this function expects batches of data, i.e. the first dimension is ``batch-size``"""
+    #
+    #     pass
+    #
+    # @abstractmethod
+    # @property
+    # def expected_input_type(self) -> str:
+    #     """if your functions assumes that the y_pred and y_true are:
+    #         numpy array -> return ``'np'``
+    #         tensorflow tensor -> return ``'tf'``
+    #     """
+    #     pass

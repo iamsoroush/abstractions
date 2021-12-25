@@ -8,21 +8,13 @@ from aimedeval.eval_base import SegEvalFunc
 class IoUScore(SegEvalFunc):
 
     def __init__(self, threshold, epsilon):
-        super(IoUScore, self).__init__()
+        super().__init__()
         self.threshold = threshold
         self.epsilon = epsilon
 
     @property
-    def expected_seg_map_channels(self) -> typing.Optional[int]:
-        return 1
-
-    @property
-    def expects_batch(self) -> bool:
+    def expects_multi_channel_seg_maps(self) -> bool:
         return True
-
-    @property
-    def expected_input_type(self) -> str:
-        return 'np'
 
     @property
     def name(self) -> str:
