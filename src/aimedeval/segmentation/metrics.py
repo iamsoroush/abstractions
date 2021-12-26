@@ -8,7 +8,7 @@ from aimedeval.eval_base import SegEvalFunc
 
 class IoUScore(SegEvalFunc):
 
-    def __init__(self, threshold, epsilon):
+    def __init__(self, threshold=0.5, epsilon=1e-3):
         super().__init__()
         self.threshold = threshold
         self.epsilon = epsilon
