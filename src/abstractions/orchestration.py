@@ -10,7 +10,7 @@ import pandas as pd
 import tensorflow as tf
 
 from . import DataLoaderBase, AugmentorBase, PreprocessorBase, ModelBuilderBase, GenericModelBuilderBase, Trainer, GenericTrainer, EvaluatorBase
-from .utils import load_config_file, check_for_config_file, get_logger, setup_mlflow, ConfigStruct, add_config_file_to_mlflow
+from .utils import load_config_file, check_for_config_file, get_logger, setup_mlflow, ConfigStruct, add_config_file_to_mlflow, load_config_as_dict
 from .abs_exceptions import *
 
 
@@ -65,12 +65,15 @@ class Orchestrator:
 
         self.config_path = check_for_config_file(self.run_dir)
         self.config = load_config_file(self.config_path.absolute())
+        self.config_as_dict = load_config_as_dict(self.config_path)
         self.logger.info(f'config file loaded: {self.config_path}')
 
         if data_dir is not None:
             self.data_dir = data_dir
         else:
             self.data_dir = Path(self.config.data_dir)
+        self.config_as_dict['data_dir'] = str(self.data_dir)
+        self.config.data_dir = str(self.data_dir)
         self.logger.info(f'data directory: {self.data_dir}')
 
         # load params
@@ -120,10 +123,10 @@ class Orchestrator:
         """Just evaluate, if exported exists."""
 
         try:
-            self.trainer._check_for_exported()
+            self.trainer.check_for_exported()
         except ExportedExists as e:
             train_active_run = self._setup_mlflow_active_run(is_evaluation=False)
-            self.trainer.load_exported(self.model_builder)
+            # self.trainer.load_exported()
             self._evaluate(train_active_run)
         else:
             raise Exception(f'exported does not exist at {self.trainer.exported_dir}')
@@ -152,22 +155,23 @@ class Orchestrator:
 
         self.logger.info('training started ...')
         try:
-            self.trainer.train(model_builder=self.model_builder,
-                               active_run=active_run,
+            self.trainer.train(active_run=active_run,
                                train_data_gen=train_data_gen,
                                n_iter_train=n_iter_train,
                                val_data_gen=validation_data_gen,
                                n_iter_val=n_iter_val)
         except ExportedExists as e:
             self.logger.warning('model is already exported. skipping training and starting evaluation...')
-            self.trainer.load_exported(self.model_builder)
+            # self.trainer.load_exported(self.model_builder)
         else:
             # exporting
-            self.trainer.export(model_builder=self.model_builder)
+            self.trainer.export(dict_config=self.config_as_dict)
             self.logger.info(f'exported to {self.trainer.exported_dir}.')
 
     def _evaluate(self, active_run):
         """evaluate on validation and test(evaluation) data."""
+
+        self.trainer.load_exported()
 
         # get ready for evaluation
         # exported_model = tfk.models.load_model(self.trainer.exported_saved_model_path)
@@ -178,7 +182,7 @@ class Orchestrator:
         val_index = self.data_loader.get_validation_index()
         eval_report_validation = self.evaluator.validation_evaluate(data_loader=self.data_loader,
                                                                     preprocessor=self.preprocessor,
-                                                                    model=self.model_builder,
+                                                                    model=self.trainer.model_builder,
                                                                     active_run=active_run,
                                                                     index=val_index)
 
@@ -190,7 +194,7 @@ class Orchestrator:
         self.logger.info('evaluating on evaluation data...')
         eval_report = self.evaluator.evaluate(data_loader=self.data_loader,
                                               preprocessor=self.preprocessor,
-                                              model=self.model_builder,
+                                              model=self.trainer.model_builder,
                                               active_run=active_run)
         eval_report_path = self._write_eval_reports(eval_report)
         self.logger.info(f'wrote evaluation report to {eval_report_path}')
@@ -236,7 +240,7 @@ class Orchestrator:
         self.logger.info('preprocessor has been initialized.')
         return preprocessor
 
-    def _create_model_builder(self) -> ModelBuilderBase:
+    def _create_model_builder(self) -> typing.Union[ModelBuilderBase, GenericModelBuilderBase]:
         try:
             class_path = self.config.model_builder_class
         except AttributeError:
@@ -255,9 +259,9 @@ class Orchestrator:
 
     def _create_trainer(self) -> typing.Union[Trainer, GenericTrainer]:
         if self.is_tf_:
-            trainer = Trainer(config=self.config, run_dir=self.run_dir)
+            trainer = Trainer(config=self.config, run_dir=self.run_dir, model_builder=self.model_builder)
         else:
-            trainer = GenericTrainer(config=self.config, run_dir=self.run_dir)
+            trainer = GenericTrainer(config=self.config, run_dir=self.run_dir, model_builder=self.model_builder)
         self.logger.info('trainer has been initialized')
         return trainer
 
@@ -297,3 +301,6 @@ class Orchestrator:
         report_df.to_csv(eval_report_path)
         report_df.describe().to_csv(self.eval_report_dir.joinpath('eval_report_summary.csv'))
         return eval_report_path
+
+    def _generate_model_card(self):
+        pass

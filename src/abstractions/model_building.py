@@ -18,9 +18,9 @@ class MBBase(BaseClass):
         self.model_ = None
 
     @abstractmethod
-    def evaluate(self,
-                 data_gen: typing.Iterator,
-                 n_iter: int) -> dict:
+    def _evaluate(self,
+                  data_gen: typing.Iterator,
+                  n_iter: int) -> dict:
         """Evaluation.
 
         Args:
@@ -32,11 +32,11 @@ class MBBase(BaseClass):
         """
 
     @abstractmethod
-    def predict(self,
-                data_gen: typing.Iterator,
-                n_iter: int) -> typing.Tuple[typing.Union[np.ndarray, tf.Tensor],
-                                            typing.Union[np.ndarray, tf.Tensor],
-                                            typing.Union[np.ndarray, tf.Tensor, list]]:
+    def _predict(self,
+                 data_gen: typing.Iterator,
+                 n_iter: int) -> typing.Tuple[typing.Union[np.ndarray, tf.Tensor],
+                                             typing.Union[np.ndarray, tf.Tensor],
+                                             typing.Union[np.ndarray, tf.Tensor, list]]:
         """Predict on a data generator which generates batches of data in each iteration.
 
         Args:
@@ -51,7 +51,7 @@ class MBBase(BaseClass):
         """
 
     @abstractmethod
-    def load(self, exported_path: Path):
+    def _load(self, exported_path: Path):
         pass
 
 
@@ -63,7 +63,7 @@ class ModelBuilderBase(MBBase):
         >>> model = model_builder.get_compiled_model()
         >>> callbacks = model_builder.get_callbacks()
         >>> class_weight = model_builder.get_class_weight()
-        >>> model.fit(train_gen, n_iter_train, callbacks=callbacks, class_weight=class_weight)
+        >>> _model.fit(train_gen, n_iter_train, callbacks=callbacks, class_weight=class_weight)
 
     """
 
@@ -99,9 +99,9 @@ class ModelBuilderBase(MBBase):
 
         return None
 
-    def evaluate(self,
-                 data_gen: typing.Iterator,
-                 n_iter: int) -> dict:
+    def _evaluate(self,
+                  data_gen: typing.Iterator,
+                  n_iter: int) -> dict:
         """Evaluation.
 
         Args:
@@ -112,11 +112,11 @@ class ModelBuilderBase(MBBase):
             a dictionary containing averaged values across entire ``data_gen`` for internal metrics of the model, i.e. {met1: averaged_val, met2: averaged_val, ...}
         """
 
-        return self.model.evaluate(data_gen, steps=n_iter, return_dict=True)
+        return self._model.evaluate(data_gen, steps=n_iter, return_dict=True)
 
-    def predict(self,
-                data_gen: typing.Iterator,
-                n_iter: int) -> typing.Tuple[typing.Any, typing.Any, typing.Any]:
+    def _predict(self,
+                 data_gen: typing.Iterator,
+                 n_iter: int) -> typing.Tuple[typing.Any, typing.Any, typing.Any]:
         """Predict on a data generator which generates batches of data in each iteration.
 
         Args:
@@ -131,10 +131,10 @@ class ModelBuilderBase(MBBase):
         """
 
         self._wrap_pred_step()
-        preds, gts, third_element = self.model.predict(data_gen, steps=n_iter)
+        preds, gts, third_element = self._model.predict(data_gen, steps=n_iter)
         return preds, gts, third_element
 
-    def load(self, exported_path: Path) -> tfk.Model:
+    def _load(self, exported_path: Path) -> tfk.Model:
         return tfk.models.load_model(exported_path)
 
     def _wrap_pred_step(self):
@@ -146,9 +146,9 @@ class ModelBuilderBase(MBBase):
 
         def new_predict_step(data):
             x, y, z = tfk.utils.unpack_x_y_sample_weight(data)
-            return self.model(x, training=False), y, z
+            return self._model(x, training=False), y, z
 
-        setattr(self.model, 'predict_step', new_predict_step)
+        setattr(self._model, 'predict_step', new_predict_step)
     #
     # @abstractmethod
     # def post_process(self, y_pred):
@@ -170,11 +170,11 @@ class ModelBuilderBase(MBBase):
     #     """
 
     @property
-    def model(self) -> tfk.Model:
+    def _model(self) -> tfk.Model:
         return self.model_
 
-    @model.setter
-    def model(self, new_model):
+    @_model.setter
+    def _model(self, new_model):
         self.model_ = new_model
 
     @classmethod
@@ -193,18 +193,24 @@ class ModelBuilderBase(MBBase):
 
 class GenericModelBuilderBase(MBBase):
 
+    def __init__(self, config):
+        super().__init__(config=config)
+        self.model_file_name = 'model.joblib'
+
     @abstractmethod
     def fit(self,
             train_data_gen: typing.Iterator,
             n_iter_train: int,
             val_data_gen: typing.Iterator,
             n_iter_val: int) -> BaseEstimator:
-        pass
+        """Fit/train your model here.
+
+        """
 
     @abstractmethod
-    def evaluate(self,
-                 data_gen: typing.Iterator,
-                 n_iter: int) -> dict:
+    def _evaluate(self,
+                  data_gen: typing.Iterator,
+                  n_iter: int) -> dict:
         """Evaluation.
 
         Args:
@@ -215,28 +221,10 @@ class GenericModelBuilderBase(MBBase):
             a dictionary containing averaged values across entire ``data_gen`` for internal metrics of the model, i.e. ``.score`` method's result for ``sklearn`` models.
         """
 
-    @staticmethod
-    def export(exported_dir: Path,
-               model: BaseEstimator):
-        """Exports (writes) the model to the given path, and returns the exported model.
-
-        Notes:
-            - you can use ``joblib.dump(model, exported_dir.joinpath('exported.joblib'))``
-
-        """
-
-        export_file = exported_dir.joinpath('model.joblib')
-        joblib.dump(model, str(export_file))
-
-    def load(self, exported_dir: Path) -> BaseEstimator:
-        export_file = exported_dir.joinpath('model.joblib')
-        loaded = joblib.load(str(export_file))
-        return loaded
-
     @abstractmethod
-    def predict(self,
-                data_gen: typing.Iterator,
-                n_iter: int) -> typing.Tuple[typing.Any, typing.Any, typing.Any]:
+    def _predict(self,
+                 data_gen: typing.Iterator,
+                 n_iter: int) -> typing.Tuple[typing.Any, typing.Any, typing.Any]:
         """Predict on a data generator which generates batches of data in each iteration.
 
         Args:
@@ -250,10 +238,38 @@ class GenericModelBuilderBase(MBBase):
             - data_ids: data-id for each sample, of ``shape(n_samples,)``
         """
 
+    def _export(self,
+                exported_dir: Path,
+                model: BaseEstimator) -> Path:
+        """Exports (writes) the model to the given directory as ``self.model_file_name``, and returns the exported model.
+
+        Notes:
+            - you can use ``joblib.dump(model, exported_dir.joinpath('exported.joblib'))``
+
+        """
+
+        export_file = exported_dir.joinpath(self.model_file_name)
+        self._export_to_path(export_file, model)
+        return export_file
+
+    def _load(self, exported_dir: Path) -> BaseEstimator:
+        export_file = exported_dir.joinpath(self.model_file_name)
+        loaded = self._load_from_path(export_file)
+        return loaded
+
+    @staticmethod
+    def _export_to_path(export_model_path: Path, model: BaseEstimator):
+        joblib.dump(model, str(export_model_path))
+
+    @staticmethod
+    def _load_from_path(exported_model_path: Path):
+        loaded = joblib.load(str(exported_model_path))
+        return loaded
+
     @property
-    def model(self) -> BaseEstimator:
+    def _model(self) -> BaseEstimator:
         return self.model_
 
-    @model.setter
-    def model(self, new_model):
+    @_model.setter
+    def _model(self, new_model):
         self.model_ = new_model

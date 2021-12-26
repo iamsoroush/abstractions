@@ -1,5 +1,7 @@
 import os
+import typing
 from abc import ABC, abstractmethod
+import yaml
 
 import shutil
 from pathlib import Path
@@ -9,13 +11,18 @@ import tensorflow.keras.callbacks as tfkc
 import mlflow
 
 from .base_class import BaseClass
-from .model_building import ModelBuilderBase, GenericModelBuilderBase, MBBase
+from .model_building import ModelBuilderBase, GenericModelBuilderBase
 from .abs_exceptions import *
 
 
 class TrainerBase(BaseClass, ABC):
+    """
 
-    def __init__(self, config, run_dir):
+    Args:
+        model_builder: an instance of ``MBBase``
+    """
+
+    def __init__(self, config, run_dir, model_builder: typing.Union[ModelBuilderBase, GenericModelBuilderBase]):
         self.run_dir = Path(run_dir)
         super().__init__(config=config)
 
@@ -24,36 +31,40 @@ class TrainerBase(BaseClass, ABC):
         self.exported_dir = self.run_dir.joinpath('exported')
         self.config_file_path = [i for i in self.run_dir.iterdir() if i.name.endswith('.yaml')][0]
 
-        self.model_builder_ = None
-
-    def _write_mlflow_run_id(self, run: mlflow.ActiveRun):
-        with open(self.run_id_path, 'w') as f:
-            f.write(run.info.run_id)
-
-    def _check_for_exported(self):
-        """Raises exception if exported directory exists and contains some files"""
-
-        if self.exported_dir.is_dir():
-            if any(self.exported_dir.iterdir()):
-                raise ExportedExists('exported files already exist.')
+        self.model_builder = model_builder
 
     @abstractmethod
     def train(self,
-              model_builder: MBBase,
               active_run: mlflow.ActiveRun,
               train_data_gen,
               n_iter_train,
               val_data_gen,
               n_iter_val):
-        pass
+        """Training the model."""
 
     @abstractmethod
-    def export(self, model_builder: MBBase):
-        pass
+    def export(self, dict_config: dict):
+        """Exports the model to ``self.exported_dir``.
+
+        Args:
+            dict_config: config file as a nested dictionary to write in exported folder
+        """
 
     @abstractmethod
-    def load_exported(self, model_builder: MBBase):
-        pass
+    def load_exported(self):
+        """Loads exported model into ``self.model_builder.model``."""
+
+    @abstractmethod
+    def check_for_exported(self):
+        """Checks for existence of exported model, if so, raises ``ExportedExists`` exception."""
+
+    def _write_mlflow_run_id(self, run: mlflow.ActiveRun):
+        with open(self.run_id_path, 'w') as f:
+            f.write(run.info.run_id)
+
+    def _write_dict_to_yaml(self, data: dict, path: Path):
+        with open(path, 'w') as outfile:
+            yaml.dump(data, outfile, default_flow_style=False)
 
 
 class Trainer(TrainerBase):
@@ -61,16 +72,16 @@ class Trainer(TrainerBase):
 
     def _load_params(self, config):
         self.epochs = config.epochs
-        self.export_metric = config.export.metric
-        self.export_mode = config.export.mode
+        self.export_metric = config._export.metric
+        self.export_mode = config._export.mode
 
     def _set_defaults(self):
         self.epochs = 10
         self.export_metric = 'val_loss'
         self.export_mode = 'min'
 
-    def __init__(self, config, run_dir):
-        super().__init__(config=config, run_dir=run_dir)
+    def __init__(self, config, run_dir, model_builder: ModelBuilderBase):
+        super().__init__(config=config, run_dir=run_dir, model_builder=model_builder)
 
         # Paths
         self.checkpoints_dir = self.run_dir.joinpath('checkpoints')
@@ -85,7 +96,6 @@ class Trainer(TrainerBase):
         self.history_ = None
 
     def train(self,
-              model_builder: ModelBuilderBase,
               active_run: mlflow.ActiveRun,
               train_data_gen,
               n_iter_train,
@@ -96,7 +106,6 @@ class Trainer(TrainerBase):
         Will try to resume training from latest checkpoint, else starts training from ``epoch=0``.
 
         Args:
-            model_builder: will be used for generating model if no checkpoints could be find.
             active_run: ``mlflow.ActiveRun`` for logging to **mlflow**.
             train_data_gen: preprocessed, augmented training-data-generator.This will be the output of
              ``Preprocessor.add_preprocess``.
@@ -108,17 +117,17 @@ class Trainer(TrainerBase):
         """
 
         # Raise exception if the best model is already exported.
-        self._check_for_exported()
+        self.check_for_exported()
 
         # Create/load model and define initial_epoch
         if any(self._get_checkpoints()):
             model, initial_epoch = self._load_latest_model()
         else:
             initial_epoch = 0
-            model = model_builder.get_compiled_model()
+            model = self.model_builder.get_compiled_model()
 
         # Get callbacks
-        callbacks = self._get_callbacks(model_builder)
+        callbacks = self._get_callbacks(self.model_builder)
 
         # Run
         # with active_run as run:
@@ -145,13 +154,16 @@ class Trainer(TrainerBase):
                   epochs=self.epochs,
                   validation_data=val_data_gen,
                   validation_steps=n_iter_val,
-                  class_weight=model_builder.get_class_weight(),
+                  class_weight=self.model_builder.get_class_weight(),
                   callbacks=callbacks)
 
-    def export(self, model_builder: ModelBuilderBase):
+    def export(self, dict_config: dict):
         """Exports the best version of ``SavedModel`` s, and ``config.yaml`` file into exported sub_directory.
 
         This method will delete all checkpoints after exporting the best one.
+
+        Args:
+            dict_config: config file as a nested dictionary to write in exported folder
         """
 
         best_model_info = self._get_best_checkpoint()
@@ -160,18 +172,29 @@ class Trainer(TrainerBase):
         exported_config_path = self.exported_dir.joinpath('config.yaml')
         shutil.copytree(best_model_info['path'], self.exported_saved_model_path,
                         symlinks=False, ignore=None, ignore_dangling_symlinks=False)
-        shutil.copy(self.config_file_path, exported_config_path)
+        # shutil.copy(self.config_file_path, exported_config_path)
+        self._write_dict_to_yaml(dict_config, exported_config_path)
 
         # Delete checkpoints
         shutil.rmtree(self.checkpoints_dir)
 
-        # Load the exported SavedModel
-        exported_model = tfk.models.load_model(self.exported_saved_model_path)
-        model_builder.model = exported_model
+        # # Load the exported SavedModel
+        # exported_model = tfk.models.load_model(self.exported_saved_model_path)
+        # model_builder.model = exported_model
 
-    def load_exported(self, model_builder: ModelBuilderBase):
-        exported_model = model_builder.load(self.exported_saved_model_path)
-        model_builder.model = exported_model
+    def load_exported(self):
+        """Loads exported model into ``self.model_builder.model``."""
+
+        exported_model = self.model_builder._load(self.exported_saved_model_path)
+        self.model_builder._model = exported_model
+
+    def check_for_exported(self):
+        """Raises exception if exported directory exists and contains ``savedmodel``"""
+
+        if self.exported_dir.is_dir():
+            if any(self.exported_dir.iterdir()):
+                if self.exported_saved_model_path.exists():
+                    raise ExportedExists('exported files already exist.')
 
     def _get_callbacks(self, model_builder: ModelBuilderBase):
         """Makes sure that TensorBoard and ModelCheckpoint callbacks exist and are correctly configured.
@@ -290,8 +313,10 @@ class GenericTrainer(TrainerBase):
         - this trainer will call the ``.train`` method of the model
     """
 
-    def __init__(self, config, run_dir):
-        super().__init__(config, run_dir)
+    def __init__(self, config, run_dir, model_builder: GenericModelBuilderBase):
+        super().__init__(config, run_dir, model_builder)
+        self.model_ = None
+        self.exported_model_path = None
 
     def _set_defaults(self):
         pass
@@ -300,7 +325,6 @@ class GenericTrainer(TrainerBase):
         pass
 
     def train(self,
-              model_builder: GenericModelBuilderBase,
               active_run: mlflow.ActiveRun,
               train_data_gen,
               n_iter_train,
@@ -310,7 +334,6 @@ class GenericTrainer(TrainerBase):
 
 
         Args:
-            model_builder: will be used for training and exporting.
             active_run: ``mlflow.ActiveRun`` for logging to **mlflow**.
             train_data_gen: preprocessed, augmented training-data-generator.This will be the output of the
              ``Preprocessor.add_preprocess``.
@@ -322,26 +345,40 @@ class GenericTrainer(TrainerBase):
         """
 
         # Raise exception if the model is already exported, i.e. the ``self.exported_dir`` is not empty.
-        self._check_for_exported()
+        self.check_for_exported()
 
         # Write run_id
         self._write_mlflow_run_id(active_run)
 
         mlflow.autolog(log_models=False)
-        fitted_model = model_builder.fit(train_data_gen,
-                                         n_iter_train,
-                                         val_data_gen,
-                                         n_iter_val)
-        model_builder.model = fitted_model
+        fitted_model = self.model_builder.fit(train_data_gen,
+                                              n_iter_train,
+                                              val_data_gen,
+                                              n_iter_val)
+        self.model_ = fitted_model
 
-    def export(self, model_builder: GenericModelBuilderBase):
-        """Exports the trained model, and ``config.yaml`` file into exported sub_directory.
+    def export(self, dict_config: dict):
+        """Exports the trained model, and ``config.yaml`` file into exported sub_directory, and adds
+
+        Args:
+            dict_config: config file as a nested dictionary to write in exported folder
+
         """
 
         exported_config_path = self.exported_dir.joinpath('config.yaml')
-        shutil.copy(self.config_file_path, exported_config_path)
-        model_builder.export(self.exported_dir, model_builder.model)
+        # shutil.copy(self.config_file_path, exported_config_path)
+        self._write_dict_to_yaml(dict_config, exported_config_path)
+        self.exported_model_path = self.model_builder._export(self.exported_dir, self.model_)
 
-    def load_exported(self, model_builder: GenericModelBuilderBase):
-        loaded = model_builder.load(self.exported_dir)
-        model_builder.model = loaded
+    def load_exported(self):
+        """Loads exported model into ``self.model_builder.model``."""
+
+        loaded = self.model_builder._load(self.exported_dir)
+        self.model_builder._model = loaded
+
+    def check_for_exported(self):
+        """Raises exception if exported directory exists and is not empty."""
+
+        if self.exported_dir.is_dir():
+            if any(self.exported_dir.iterdir()):
+                raise ExportedExists('exported files already exist.')

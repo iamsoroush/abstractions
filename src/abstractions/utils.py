@@ -187,7 +187,23 @@ class Struct:
 
 def load_config_file(path: pathlib.Path) -> ConfigStruct:
     """
-    loads the json config file and returns a dictionary
+    loads the ``yaml`` config file and returns a ``ConfigStruct``
+
+    Args:
+        path: path to json config file
+
+    Returns:
+        a nested object in which parameters are accessible using dot notations, for example ``config.model.optimizer.lr``
+
+    """
+
+    config_obj = ConfigStruct(**load_config_as_dict(path))
+    return config_obj
+
+
+def load_config_as_dict(path: pathlib.Path) -> dict:
+    """
+    loads the ``yaml`` config file and returns a dictionary
 
     Args:
         path: path to json config file
@@ -199,9 +215,7 @@ def load_config_file(path: pathlib.Path) -> ConfigStruct:
 
     with open(path) as f:
         data_map = yaml.safe_load(f)
-
-    config_obj = ConfigStruct(**data_map)
-    return config_obj
+    return data_map
 
 
 def get_logger(name: str) -> logging.Logger:

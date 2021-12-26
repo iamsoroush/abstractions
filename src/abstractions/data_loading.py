@@ -18,19 +18,17 @@ class DataLoaderBase(BaseClass):
         - You can use the third argument with weighted metrics, or for weighted custom loss functions.
 
     Attributes:
-        data_dir: absolute directory of the dataset
         config (ConfigStruct): config file
 
 
     Examples:
-        >>> data_loader = DataLoader(config, data_dir)
+        >>> data_loader = DataLoader(config)
         >>> data_gen, data_n = data_loader.create_training_generator()
         >>> test_data_gen, test_data_n = data_loader.create_test_generator()
 
     """
 
-    def __init__(self, config, data_dir: pathlib.Path):
-        self.data_dir = data_dir
+    def __init__(self, config):
         super().__init__(config)
 
     @abstractmethod
