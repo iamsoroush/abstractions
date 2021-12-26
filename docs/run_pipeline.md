@@ -195,32 +195,29 @@ trainer.train(model_builder=model_builder,
 
 Export:
 
-
 ```python
-exported_dir = trainer.export()
+exported_dir = trainer._export()
 ```
 
 Load the exported model and trigger evaluation process:
-
 
 ```python
 import mlflow
 from evaluation import Evaluator
 
-
 exported_model = tfk.models.load_model(trainer.exported_saved_model_path)
 
 mlflow.end_run()
 eval_active_run = setup_mlflow(mlflow_tracking_uri=MLFLOW_TRACKING_URI,
-                                mlflow_experiment_name=config.project_name,
-                                base_dir=run_dir,
-                                evaluation=True)
+                               mlflow_experiment_name=config.project_name,
+                               base_dir=run_dir,
+                               evaluation=True)
 
 evaluator = Evaluator(config)
-eval_report = evaluator.evaluate(data_loader=data_loader,
-                                preprocessor=preprocessor,
-                                exported_model=exported_model,
-                                active_run=eval_active_run)
+eval_report = evaluator._evaluate(data_loader=data_loader,
+                                  preprocessor=preprocessor,
+                                  exported_model=exported_model,
+                                  active_run=eval_active_run)
 eval_report.describe()
 
 
