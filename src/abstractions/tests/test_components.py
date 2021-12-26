@@ -441,7 +441,7 @@ class TestModelBuilder:
         train_gen = component_holder['train_data_gen']
         x_b, y_b, w_b = next(iter(train_gen))
 
-        compiled_model.evaluate(x=x_b, y=y_b, sample_weight=w_b)
+        compiled_model._evaluate(x=x_b, y=y_b, sample_weight=w_b)
         assert True
 
         # assert input_h == int(run_config.input_height)
@@ -457,7 +457,7 @@ class TestModelBuilder:
         gen = component_holder['validation_data_gen']
         x_b, y_b, w_b = next(iter(gen))
 
-        compiled_model.evaluate(x=x_b, y=y_b, sample_weight=w_b)
+        compiled_model._evaluate(x=x_b, y=y_b, sample_weight=w_b)
         assert True
 
         # assert input_h == int(run_config.input_height)
@@ -480,8 +480,8 @@ class TestTraining:
         x_tr, y_tr, w_tr = next(iter(train_gen))
         x_val, y_val, w_val = next(iter(val_gen))
 
-        initial_tr_loss = model.evaluate(x_tr, y_tr, sample_weight=w_tr, return_dict=True)['loss']
-        initial_val_loss = model.evaluate(x_val, y_val, sample_weight=w_val, return_dict=True)['loss']
+        initial_tr_loss = model._evaluate(x_tr, y_tr, sample_weight=w_tr, return_dict=True)['loss']
+        initial_val_loss = model._evaluate(x_val, y_val, sample_weight=w_val, return_dict=True)['loss']
         # train_iter = 3  # component_holder['n_iter_train']
         # val_iter = 3  # component_holder['n_iter_validation']
 
@@ -550,7 +550,7 @@ class TestEvaluation:
 
         compiled_model = component_holder['compiled_model']
         x_sample, y_sample, w_sample = component_holder['validation_sample']
-        y_pred = compiled_model.predict(np.expand_dims(x_sample, axis=0))[0]
+        y_pred = compiled_model._predict(np.expand_dims(x_sample, axis=0))[0]
 
         failed_funcs = list()
         for f_name, f in eval_funcs.items():
@@ -573,7 +573,7 @@ class TestEvaluation:
 
         compiled_model = component_holder['compiled_model']
         x_sample, y_sample, w_sample = component_holder['evaluation_sample']
-        y_pred = compiled_model.predict(np.expand_dims(x_sample, axis=0))[0]
+        y_pred = compiled_model._predict(np.expand_dims(x_sample, axis=0))[0]
 
         failed_funcs = list()
         for f_name, f in eval_funcs.items():
