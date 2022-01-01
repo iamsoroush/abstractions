@@ -35,8 +35,8 @@ class MBBase(BaseClass):
     def _predict(self,
                  data_gen: typing.Iterator,
                  n_iter: int) -> typing.Tuple[typing.Union[np.ndarray, tf.Tensor],
-                                             typing.Union[np.ndarray, tf.Tensor],
-                                             typing.Union[np.ndarray, tf.Tensor, list]]:
+                                              typing.Union[np.ndarray, tf.Tensor],
+                                              typing.Union[np.ndarray, tf.Tensor, list]]:
         """Predict on a data generator which generates batches of data in each iteration.
 
         Args:
@@ -63,7 +63,7 @@ class ModelBuilderBase(MBBase):
         >>> model = model_builder.get_compiled_model()
         >>> callbacks = model_builder.get_callbacks()
         >>> class_weight = model_builder.get_class_weight()
-        >>> _model.fit(train_gen, n_iter_train, callbacks=callbacks, class_weight=class_weight)
+        >>> model.fit(train_gen, n_iter_train, callbacks=callbacks, class_weight=class_weight)
 
     """
 

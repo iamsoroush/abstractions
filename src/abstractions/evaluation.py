@@ -197,9 +197,9 @@ class EvaluatorBase(EvalBase, ABC):
             mlflow.log_metrics(metrics_to_log)
 
     def _generate_eval_reports(self, preds, gts, data_ids):
-        eval_funcs = self.get_eval_funcs()
-        eval_func_dict = {func.name: func.get_func() for func in eval_funcs}
-        report = {func.name: list() for func in eval_funcs}
+        eval_funcs = [eval_func.get_func() for eval_func in self.get_eval_funcs()]
+        eval_func_dict = {func.__name__: func for func in eval_funcs}
+        report = {func.__name__: list() for func in eval_funcs}
         # report = {k: list() for k in eval_funcs.keys()}
         n_data = len(preds)
         indxs = list()

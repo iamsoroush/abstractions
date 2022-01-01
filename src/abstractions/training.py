@@ -13,6 +13,7 @@ import mlflow
 from .base_class import BaseClass
 from .model_building import ModelBuilderBase, GenericModelBuilderBase
 from .abs_exceptions import *
+from .utils import ConfigStruct
 
 
 class TrainerBase(BaseClass, ABC):
@@ -22,15 +23,18 @@ class TrainerBase(BaseClass, ABC):
         model_builder: an instance of ``MBBase``
     """
 
-    def __init__(self, config, run_dir, model_builder: typing.Union[ModelBuilderBase, GenericModelBuilderBase]):
+    def __init__(self,
+                 config: ConfigStruct,
+                 run_dir: Path,
+                 exported_dir: Path,
+                 model_builder: typing.Union[ModelBuilderBase, GenericModelBuilderBase]):
         self.run_dir = Path(run_dir)
+        self.exported_dir = exported_dir
         super().__init__(config=config)
 
         # Paths
         self.run_id_path = self.run_dir.joinpath('run_id.txt')
-        self.exported_dir = self.run_dir.joinpath('exported')
         self.config_file_path = [i for i in self.run_dir.iterdir() if i.name.endswith('.yaml')][0]
-
         self.model_builder = model_builder
 
     @abstractmethod
@@ -62,7 +66,8 @@ class TrainerBase(BaseClass, ABC):
         with open(self.run_id_path, 'w') as f:
             f.write(run.info.run_id)
 
-    def _write_dict_to_yaml(self, data: dict, path: Path):
+    @staticmethod
+    def _write_dict_to_yaml(data: dict, path: Path):
         with open(path, 'w') as outfile:
             yaml.dump(data, outfile, default_flow_style=False)
 
@@ -72,16 +77,20 @@ class Trainer(TrainerBase):
 
     def _load_params(self, config):
         self.epochs = config.epochs
-        self.export_metric = config._export.metric
-        self.export_mode = config._export.mode
+        self.export_metric = config.export.metric
+        self.export_mode = config.export.mode
 
     def _set_defaults(self):
         self.epochs = 10
         self.export_metric = 'val_loss'
         self.export_mode = 'min'
 
-    def __init__(self, config, run_dir, model_builder: ModelBuilderBase):
-        super().__init__(config=config, run_dir=run_dir, model_builder=model_builder)
+    def __init__(self,
+                 config: ConfigStruct,
+                 run_dir: Path,
+                 exported_dir: Path,
+                 model_builder: ModelBuilderBase):
+        super().__init__(config=config, run_dir=run_dir, exported_dir=exported_dir, model_builder=model_builder)
 
         # Paths
         self.checkpoints_dir = self.run_dir.joinpath('checkpoints')
@@ -116,8 +125,8 @@ class Trainer(TrainerBase):
 
         """
 
-        # Raise exception if the best model is already exported.
-        self.check_for_exported()
+        # # Raise exception if the best model is already exported.
+        # self.check_for_exported()
 
         # Create/load model and define initial_epoch
         if any(self._get_checkpoints()):
@@ -128,11 +137,6 @@ class Trainer(TrainerBase):
 
         # Get callbacks
         callbacks = self._get_callbacks(self.model_builder)
-
-        # Run
-        # with active_run as run:
-        # Add params from config file to mlflow
-        # self._add_config_file_to_mlflow()
 
         # Write run_id
         self._write_mlflow_run_id(active_run)
@@ -313,8 +317,12 @@ class GenericTrainer(TrainerBase):
         - this trainer will call the ``.train`` method of the model
     """
 
-    def __init__(self, config, run_dir, model_builder: GenericModelBuilderBase):
-        super().__init__(config, run_dir, model_builder)
+    def __init__(self,
+                 config: ConfigStruct,
+                 run_dir: Path,
+                 exported_dir: Path,
+                 model_builder: GenericModelBuilderBase):
+        super().__init__(config=config, run_dir=run_dir, exported_dir=exported_dir, model_builder=model_builder)
         self.model_ = None
         self.exported_model_path = None
 

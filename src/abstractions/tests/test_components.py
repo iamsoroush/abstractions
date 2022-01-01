@@ -68,8 +68,7 @@ class TestInitializeComponents:
 
     @pytest.mark.dependency(depends=['TestLocateComponents::test_locate_data_loader_class'])
     def test_initialize_data_loader(self, run_config, component_holder):
-        data_dir = Path(run_config.data_dir)
-        data_loader = component_holder.get('data_loader_class')(run_config, data_dir)
+        data_loader = component_holder.get('data_loader_class')(run_config)
         assert isinstance(data_loader, DataLoaderBase)
         component_holder['data_loader'] = data_loader
 
@@ -441,7 +440,7 @@ class TestModelBuilder:
         train_gen = component_holder['train_data_gen']
         x_b, y_b, w_b = next(iter(train_gen))
 
-        compiled_model._evaluate(x=x_b, y=y_b, sample_weight=w_b)
+        compiled_model.evaluate(x=x_b, y=y_b, sample_weight=w_b)
         assert True
 
         # assert input_h == int(run_config.input_height)
@@ -457,7 +456,7 @@ class TestModelBuilder:
         gen = component_holder['validation_data_gen']
         x_b, y_b, w_b = next(iter(gen))
 
-        compiled_model._evaluate(x=x_b, y=y_b, sample_weight=w_b)
+        compiled_model.evaluate(x=x_b, y=y_b, sample_weight=w_b)
         assert True
 
         # assert input_h == int(run_config.input_height)
@@ -480,8 +479,8 @@ class TestTraining:
         x_tr, y_tr, w_tr = next(iter(train_gen))
         x_val, y_val, w_val = next(iter(val_gen))
 
-        initial_tr_loss = model._evaluate(x_tr, y_tr, sample_weight=w_tr, return_dict=True)['loss']
-        initial_val_loss = model._evaluate(x_val, y_val, sample_weight=w_val, return_dict=True)['loss']
+        initial_tr_loss = model.evaluate(x_tr, y_tr, sample_weight=w_tr, return_dict=True)['loss']
+        initial_val_loss = model.evaluate(x_val, y_val, sample_weight=w_val, return_dict=True)['loss']
         # train_iter = 3  # component_holder['n_iter_train']
         # val_iter = 3  # component_holder['n_iter_validation']
 
@@ -550,17 +549,21 @@ class TestEvaluation:
 
         compiled_model = component_holder['compiled_model']
         x_sample, y_sample, w_sample = component_holder['validation_sample']
-        y_pred = compiled_model._predict(np.expand_dims(x_sample, axis=0))[0]
+        y_pred = compiled_model.predict(np.expand_dims(x_sample, axis=0))[0]
 
         failed_funcs = list()
-        for f_name, f in eval_funcs.items():
-            if not (isinstance(f_name, str) or isinstance(f, FunctionType)):
-                failed_funcs.append(f_name)
+        for eval_func in eval_funcs:
+            f_name = eval_func.name
+            f = eval_func.get_func()
+            if not isinstance(f_name, str):
+                failed_funcs.append(f'{f_name}: name is not str')
+            elif not isinstance(f, FunctionType):
+                failed_funcs.append(f'{f_name}: function is not a FunctionType')
             else:
                 try:
                     f(y_sample, y_pred)
                 except Exception as e:
-                    failed_funcs.append(f_name)
+                    failed_funcs.append(f'{f_name}: error in calculations: {e.args[0]}')
 
         if any(failed_funcs):
             pytest.fail(f'failed {len(failed_funcs)}/{len(eval_funcs)}. failed funcs are {failed_funcs}')
@@ -573,18 +576,21 @@ class TestEvaluation:
 
         compiled_model = component_holder['compiled_model']
         x_sample, y_sample, w_sample = component_holder['evaluation_sample']
-        y_pred = compiled_model._predict(np.expand_dims(x_sample, axis=0))[0]
+        y_pred = compiled_model.predict(np.expand_dims(x_sample, axis=0))[0]
 
         failed_funcs = list()
-        for f_name, f in eval_funcs.items():
-            if not (isinstance(f_name, str) or isinstance(f, FunctionType)):
-                failed_funcs.append(f_name)
+        for eval_func in eval_funcs:
+            f_name = eval_func.name
+            f = eval_func.get_func()
+            if not isinstance(f_name, str):
+                failed_funcs.append(f'{f_name}: name is not str')
+            elif not isinstance(f, FunctionType):
+                failed_funcs.append(f'{f_name}: function is not a FunctionType')
             else:
                 try:
                     f(y_sample, y_pred)
                 except Exception as e:
-                    failed_funcs.append(f_name)
-
+                    failed_funcs.append(f'{f_name}: error in calculations: {e.args[0]}')
         if any(failed_funcs):
             pytest.fail(f'failed {len(failed_funcs)}/{len(eval_funcs)}. failed funcs are {failed_funcs}')
 

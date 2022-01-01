@@ -61,8 +61,11 @@ def setup_mlflow(mlflow_tracking_uri, mlflow_experiment_name: str,
     return active_run
 
 
-def add_config_file_to_mlflow(config_file_path):
+def add_config_file_to_mlflow(config_dict: dict):
     """Adds parameters from config file to mlflow.
+
+    Args:
+        config_dict: config file as a nested dictionary
     """
 
     def param_extractor(dictionary):
@@ -82,10 +85,9 @@ def add_config_file_to_mlflow(config_file_path):
                 values.append(f'{key}: {value}')
         return values
 
-    with open(config_file_path) as file:
-        data_map = yaml.safe_load(file)
-
-    str_params = param_extractor(data_map)
+    fields_to_ignore = ['model_details', 'model_parameters', 'considerations']
+    new_config = {k: v for k, v in config_dict.items() if k not in fields_to_ignore}
+    str_params = param_extractor(new_config)
     params = {}
     for item in str_params:
         name = f"config_{item.split(':')[0]}"
@@ -167,7 +169,12 @@ class ConfigStruct:
         self.do_train_augmentation = None
         self.do_validation_augmentation = None
         self.export = Struct(metric='val_loss', mode='min')
-        self.project_name = None
+        self.model_details = Struct(name=None, overview=None, documentation=None)
+        self.model_parameters = Struct(model_architecture=None,
+                                       data=Struct(name=None, description=None, link=None),
+                                       input_format=None,
+                                       output_format=None)
+        self.considerations = Struct(users=list(), use_cases=list(), limitations=list())
 
         for k, v in entries.items():
             if isinstance(v, dict):

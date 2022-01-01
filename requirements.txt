@@ -9,5 +9,6 @@ SimpleITK>=2.1.1
 pyyaml>=5.4.1
 albumentations>=1.1.0
 tqdm>=4.61.2
+model-card-toolkit==1.1.0
 pytest>=6.2.5
 pytest-dependency>=0.5.1
