@@ -41,7 +41,7 @@ class IoUScore(SegEvalFunc):
 
             _ = _check_inputs(y_true, y_pred)
 
-            y_pred = (y_pred > self.threshold).astype(np.float32)
+            y_pred = np.array(y_pred > self.threshold, dtype=np.float32)
             intersection = np.logical_and(y_true, y_pred)
             union = np.logical_or(y_true, y_pred)
             iou_coef = (np.sum(intersection) + self.epsilon) / (np.sum(union) + self.epsilon)
@@ -138,7 +138,7 @@ class DiceScore(SegEvalFunc):
 
             _ = _check_inputs(y_true, y_pred)
 
-            y_pred = (y_pred > self.threshold).astype(np.float32)
+            y_pred = np.array(y_pred > self.threshold, dtype=np.float32)
             intersection = np.logical_and(y_true, y_pred)
             intersection2 = 2 * np.sum(intersection)
             dice_coef = (intersection2 + self.epsilon) / (np.sum(y_pred + y_true) + self.epsilon)
@@ -331,10 +331,10 @@ class Precision(SegEvalFunc):
 
 
 def _check_inputs(y_true, y_pred):
-    assert isinstance(y_true, np.ndarray) and isinstance(y_pred, np.ndarray), \
-        'arrays must be of type numpy.ndarray'
-    assert np.issubdtype(y_true.dtype, np.number) and np.issubdtype(y_pred.dtype, np.number), \
-        'the arrays data type must be numeric'
+    # assert isinstance(y_true, np.ndarray) and isinstance(y_pred, np.ndarray), \
+    #     'arrays must be of type numpy.ndarray'
+    # assert np.issubdtype(y_true.dtype, np.number) and np.issubdtype(y_pred.dtype, np.number), \
+    #     'the arrays data type must be numeric'
     assert y_true.shape == y_pred.shape, \
         'arrays must have equal shapes'
 
@@ -367,8 +367,8 @@ def get_conf_mat_elements(y_true, y_pred, threshold=0.5):
 
     _ = _check_inputs(y_true, y_pred)
 
-    y_pred_thresholded = (y_pred > threshold).astype(np.float32)
-    y_true_thresholded = (y_true > threshold).astype(np.float32)
+    y_pred_thresholded = np.array(y_pred > threshold, dtype=np.float32)
+    y_true_thresholded = np.array(y_true > threshold, dtype=np.float32)
 
     conf_mat = confusion_matrix(np.reshape(y_true_thresholded, -1), np.reshape(y_pred_thresholded, -1))
     tn, fp, fn, tp = np.reshape(conf_mat, -1)

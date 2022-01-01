@@ -6,13 +6,13 @@ class EvalFunc:
 
     """Rule: function's input and output must be ``np.ndarray``"""
 
-    @abstractmethod
     @property
+    @abstractmethod
     def name(self) -> str:
         pass
 
-    @abstractmethod
     @property
+    @abstractmethod
     def description(self) -> str:
         pass
         # return self.__doc__
@@ -24,7 +24,7 @@ class EvalFunc:
 
 class SegEvalFunc(EvalFunc):
 
-    ## input and output type: numpy, no batch
+    # input and output type: numpy, no batch
 
     def expected_shape(self) -> typing.Tuple[str]:
         """function expects y_true and y_pred to be in this shape.
@@ -40,8 +40,8 @@ class SegEvalFunc(EvalFunc):
             ret.append('n_classes')
         return tuple(ret)
 
-    @abstractmethod
     @property
+    @abstractmethod
     def expects_multi_channel_seg_maps(self) -> bool:
         """return ``True`` if your metric expects something like (h, w, n), and ``False`` if you expect binary maps which
          have 2 dimensions, i.e (h, w)"""
