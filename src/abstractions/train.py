@@ -35,7 +35,8 @@ def main():
     # project_root = Path(args.project_root)
     project_root = args.project_root
     if project_root is None:
-        project_root = Path(__file__).absolute().parent.parent
+        # project_root = Path(__file__).absolute().parent.parent
+        project_root = Path(os.getcwd()).absolute()
     else:
         project_root = Path(project_root)
 

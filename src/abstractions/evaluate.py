@@ -20,7 +20,7 @@ def parse_args():
     parser.add_argument('--project_root',
                         type=str,
                         help='absolute path to the root of your project(repository)',
-                        required=False)
+                        required=True)
 
     return parser.parse_args()
 
@@ -34,7 +34,8 @@ def main():
     run_name = str(args.run_name)
     project_root = args.project_root
     if project_root is None:
-        project_root = Path(__file__).absolute().parent.parent
+        # project_root = Path(__file__).absolute().parent.parent
+        project_root = Path(os.getcwd()).absolute()
     else:
         project_root = Path(project_root)
 

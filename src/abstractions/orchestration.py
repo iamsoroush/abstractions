@@ -13,7 +13,7 @@ from . import DataLoaderBase, AugmentorBase, PreprocessorBase, ModelBuilderBase,
     GenericTrainer, EvaluatorBase
 from .utils import load_config_file, check_for_config_file, get_logger, setup_mlflow, add_config_file_to_mlflow,\
     load_config_as_dict
-from model_card import ModelCardGenerator
+from .model_card import ModelCardGenerator
 from .abs_exceptions import *
 
 
