@@ -14,6 +14,7 @@ import numpy as np
 from abstractions.utils import load_config_file
 from abstractions import DataLoaderBase, AugmentorBase, PreprocessorBase, ModelBuilderBase, EvaluatorBase
 from types import FunctionType
+from deep_utils import color_str
 
 warnings.filterwarnings('ignore')
 
@@ -76,17 +77,25 @@ class TestDataLoader:
 
     @pytest.mark.dependency(depends=['TestDataLoader::test_train_generator'])
     def test_train_gen_out(self, component_holder):
+        """Checks train generator's number of outputs"""
         gen = component_holder['train_data_gen']
         ret = next(iter(gen))
-        assert len(ret) == 3
+        assert len(
+            ret) == 3, color_str(
+            f"Generator returns two components. Ignore this message if you don't have weights for your samples",
+            "yellow", mode="bold") if len(
+            ret) == 2 else color_str("Generator does not return a proper number of outputs!", "red",
+                                     mode=["bold", "underline"])
 
     # ---------- Validation Data ----------
     @pytest.mark.dependency(depends=['TestDataLoader::test_initialize_data_loader'])
     def test_create_validation_generator(self, run_config, component_holder):
         data_loader = component_holder['data_loader']
         ret = data_loader.create_validation_generator()
-        assert len(ret) == 2
 
+        assert len(ret) == 2, color_str(
+            f"{test_create_validation_generator} should return a generator and dataset count", "red",
+            mode=["bold", "underline"])
         validation_data_gen, validation_n = ret
         component_holder['validation_data_gen'] = validation_data_gen
         component_holder['validation_n'] = validation_n
@@ -103,15 +112,27 @@ class TestDataLoader:
     def test_validation_gen_out(self, component_holder):
         gen = component_holder['validation_data_gen']
         ret = next(iter(gen))
-        assert len(ret) == 3
+        assert len(
+            ret) == 3, color_str(
+            f"Generator returns two components. Ignore this message if you don't have weights for your samples",
+            "yellow", mode="bold") if len(
+            ret) == 2 else color_str("Generator does not return a proper number of outputs!", "red",
+                                     mode=["bold", "underline"])
 
     # ---------- Test Data ----------
     @pytest.mark.dependency(depends=['TestDataLoader::test_initialize_data_loader'])
     def test_create_evaluation_generator(self, run_config, component_holder):
-        data_loader = component_holder['data_loader']
-        ret = data_loader.create_test_generator()
-        assert len(ret) == 2
-
+        """Checking evaluation/test dataset"""
+        try:
+            data_loader = component_holder['data_loader']
+            ret = data_loader.create_test_generator()
+            assert len(ret) == 2, color_str(
+                "test_create_validation_generator should return a generator and dataset count", "red",
+                mode=["bold", "underline"])
+        except Exception as e:
+            raise Exception(color_str(
+                "Error in evaluation generation", "red",
+                mode=["bold", "underline"]))
         evaluation_data_gen, evaluation_n = ret
         component_holder['evaluation_data_gen'] = evaluation_data_gen
         component_holder['evaluation_n'] = evaluation_n
@@ -552,7 +573,6 @@ class TestTraining:
     def test_model_val_loss_is_decreasing(self, component_holder):
         model_loss = component_holder['training_history']['val_loss']
         assert model_loss[-1] < model_loss[0]
-
 
 # import pytest
 # from pathlib import Path
