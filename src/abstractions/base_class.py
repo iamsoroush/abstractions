@@ -11,13 +11,13 @@ class BaseClass(ABC):
         if config is not None:
             self._load_params(config)
 
-    @abstractmethod
+    # @abstractmethod
     def _load_params(self, config):
         """Read parameters from config file."""
 
         pass
 
-    @abstractmethod
+    # @abstractmethod
     def _set_defaults(self):
         """Default values for your class, if ``None`` is passed as config.
 

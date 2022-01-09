@@ -1,13 +1,11 @@
 from abc import abstractmethod
 import typing
 from pathlib import Path
-
 import joblib
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras as tfk
 from sklearn.base import BaseEstimator
-
 from .base_class import BaseClass
 
 

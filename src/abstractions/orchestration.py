@@ -203,8 +203,12 @@ class Orchestrator:
             class_path = self.config.data_loader_class
         except AttributeError:
             raise ConfigParamDoesNotExist('could not find data_loader_class in config file.')
+        try:
+            data_loader = locate(class_path)(self.config, self.data_dir)
+        except TypeError as e:
+            self.logger.error(f"class:{class_path} for data_loader is not defined!")
+            raise e
 
-        data_loader = locate(class_path)(self.config, self.data_dir)
         assert isinstance(data_loader, DataLoaderBase)
         self.logger.info('data-loader has been initialized.')
         return data_loader
@@ -230,8 +234,11 @@ class Orchestrator:
             class_path = self.config.preprocessor_class
         except AttributeError:
             raise ConfigParamDoesNotExist('could not find preprocessor_class in config file.')
-
-        preprocessor = locate(class_path)(self.config)
+        try:
+            preprocessor = locate(class_path)(self.config)
+        except TypeError as e:
+            self.logger.error(f"class:{class_path} for preprocess is not defined!")
+            raise e
         assert isinstance(preprocessor, PreprocessorBase)
         self.logger.info('preprocessor has been initialized.')
         return preprocessor
@@ -241,8 +248,11 @@ class Orchestrator:
             class_path = self.config.model_builder_class
         except AttributeError:
             raise ConfigParamDoesNotExist('could not find model_builder_class in config file.')
-
-        model_builder = locate(class_path)(self.config)
+        try:
+            model_builder = locate(class_path)(self.config)
+        except TypeError as e:
+            self.logger.error(f"class: {class_path} is not defined!")
+            raise e
         if isinstance(model_builder, ModelBuilderBase):
             self.is_tf_ = True
         elif isinstance(model_builder, GenericModelBuilderBase):

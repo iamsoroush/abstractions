@@ -1,5 +1,4 @@
 from abc import abstractmethod
-
 from .base_class import BaseClass
 
 

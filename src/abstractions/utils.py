@@ -2,9 +2,7 @@ import yaml
 import pathlib
 import logging
 import sys
-
 import mlflow
-
 from .abs_exceptions import ConfigNotFound, FoundMultipleConfigs
 
 
@@ -116,7 +114,6 @@ def check_for_config_file(run_dir: pathlib.Path) -> pathlib.Path:
         raise ConfigNotFound(f'no .yaml files found.')
     elif len(yaml_files) > 1:
         raise FoundMultipleConfigs(f'found more than one .yaml files.')
-
     return yaml_files[0]
 
 
