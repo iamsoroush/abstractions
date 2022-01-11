@@ -205,7 +205,7 @@ Load the exported model and trigger evaluation process:
 import mlflow
 from evaluation import Evaluator
 
-exported_model = tfk.models.load_model(trainer.exported_saved_model_path)
+exported_model = tfk.models.load_model(trainer.exported_model_path)
 
 mlflow.end_run()
 eval_active_run = setup_mlflow(mlflow_tracking_uri=MLFLOW_TRACKING_URI,
@@ -214,10 +214,10 @@ eval_active_run = setup_mlflow(mlflow_tracking_uri=MLFLOW_TRACKING_URI,
                                evaluation=True)
 
 evaluator = Evaluator(config)
-eval_report = evaluator._evaluate(data_loader=data_loader,
-                                  preprocessor=preprocessor,
-                                  exported_model=exported_model,
-                                  active_run=eval_active_run)
+eval_report = evaluator._generate_eval_reports(data_loader=data_loader,
+                                               preprocessor=preprocessor,
+                                               exported_model=exported_model,
+                                               active_run=eval_active_run)
 eval_report.describe()
 
 
