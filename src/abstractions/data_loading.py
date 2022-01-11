@@ -1,8 +1,10 @@
 import pathlib
 from abc import abstractmethod
-
+from typing import Tuple, Any, Union
 from .base_class import BaseClass
 from .utils import ConfigStruct
+from tensorflow.keras.utils import Sequence
+from tensorflow.data import Dataset
 
 
 class DataLoaderBase(BaseClass):
@@ -32,7 +34,7 @@ class DataLoaderBase(BaseClass):
         super().__init__(config)
 
     @abstractmethod
-    def create_training_generator(self):
+    def create_training_generator(self) -> Tuple[Union[Dataset, Sequence], int]:
         """Create data generator for training sub-set.
 
         This will create a ``generator``/``tf.data.Dataset`` which yields three components:
@@ -40,7 +42,8 @@ class DataLoaderBase(BaseClass):
 
         Notes:
             - If you don't need ``sample_weight``, set it to ``1`` for all data-points.
-            - Design this generator in a way that is compatible with your implementation of ``Augmentor``, ``Preprocessor`` and ``Evaluator``.
+            - Design this generator in a way that is compatible with your implementation of ``Augmentor``,
+             ``Preprocessor`` and ``Evaluator``.
 
         Returns:
             tuple(generator, train_n):

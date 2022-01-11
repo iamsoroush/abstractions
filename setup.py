@@ -36,7 +36,8 @@ setup(
         # 'tensorflow>=2.2',
         'tqdm',
         'pandas',
-        'mlflow'
+        'mlflow',
+        'deep_utils'
     ],
     # packages=['abstractions'],
     python_requires=">=3.6"

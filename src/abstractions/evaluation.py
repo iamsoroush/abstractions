@@ -3,6 +3,7 @@ from abc import abstractmethod, ABC
 import mlflow
 from tqdm import tqdm
 import typing
+import yaml
 
 import numpy as np
 import pandas as pd

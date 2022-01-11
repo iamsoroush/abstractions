@@ -58,7 +58,7 @@ class Orchestrator:
          project_name (str): repository's name
          src_code_path (Path): absolute path to source code, i.e. ``{self.project_root}/{self.config.src_code_path}``, will be included in system paths
          eval_report_dir (Path): path to evaluation reports for this run mlflow_tracking_uri (Path): tracking-uri used as mlflow's backend-store
-         generate_model_card (Bool): whether to generate model-card for this experiment's evaluation or not
+         do_generate_model_card (Bool): whether to generate model-card for this experiment's evaluation or not
 
     """
 
@@ -328,8 +328,12 @@ class Orchestrator:
             class_path = self.config.data_loader_class
         except AttributeError:
             raise ConfigParamDoesNotExist('could not find data_loader_class in config file.')
+        try:
+            data_loader = locate(class_path)(self.config, self.data_dir)
+        except TypeError as e:
+            self.logger.error(f"class:{class_path} for data_loader is not defined!")
+            raise e
 
-        data_loader = locate(class_path)(self.config)
         assert isinstance(data_loader, DataLoaderBase)
         self.logger.info('data-loader has been initialized.')
         return data_loader
@@ -355,8 +359,11 @@ class Orchestrator:
             class_path = self.config.preprocessor_class
         except AttributeError:
             raise ConfigParamDoesNotExist('could not find preprocessor_class in config file.')
-
-        preprocessor = locate(class_path)(self.config)
+        try:
+            preprocessor = locate(class_path)(self.config)
+        except TypeError as e:
+            self.logger.error(f"class:{class_path} for preprocess is not defined!")
+            raise e
         assert isinstance(preprocessor, PreprocessorBase)
         self.logger.info('preprocessor has been initialized.')
         return preprocessor
@@ -366,8 +373,11 @@ class Orchestrator:
             class_path = self.config.model_builder_class
         except AttributeError:
             raise ConfigParamDoesNotExist('could not find model_builder_class in config file.')
-
-        model_builder = locate(class_path)(self.config)
+        try:
+            model_builder = locate(class_path)(self.config)
+        except TypeError as e:
+            self.logger.error(f"class: {class_path} is not defined!")
+            raise e
         if isinstance(model_builder, ModelBuilderBase):
             self.is_tf_ = True
         elif isinstance(model_builder, GenericModelBuilderBase):
@@ -407,9 +417,6 @@ class Orchestrator:
 
     def _setup_mlflow_active_run(self, is_evaluation):
         """Setup an mlflow run.
-
-        Notes: - assumption: if ``is_evaluation``, we assume that the config file, project name, run name and code
-        version are already
         """
 
         mlflow.end_run()
