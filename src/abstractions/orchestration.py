@@ -13,6 +13,7 @@ from . import DataLoaderBase, AugmentorBase, PreprocessorBase, ModelBuilderBase,
     GenericTrainer, EvaluatorBase
 from .utils import load_config_file, check_for_config_file, get_logger, setup_mlflow, add_config_file_to_mlflow,\
     load_config_as_dict
+from model_abs import ModelEvaluatorInterface
 from .model_card import ModelCardGenerator
 from .abs_exceptions import *
 
@@ -49,14 +50,15 @@ class Orchestrator:
         eval_reports_dir (Path): directory of evaluation reports for all projects
         mlflow_tracking_uri (Path): tracking-uri used as mlflow's backend-store
 
-    Attributes: project_root (Path): repository's absolute path run_name (str): run's folder name run_dir (Path):
-    i.e. ``{self.project_root}/runs/{self.run_name}`` data_dir (Path): absolute path to dataset logger (
-    logging.Logger): orchestrator's logger object config (ConfigStruct): config_file parsed as a python object with
-    nested attributes project_name (str): repository's name src_code_path (Path): absolute path to source code,
-    i.e. ``{self.project_root}/{self.config.src_code_path}``, will be included in system paths eval_report_dir (
-    Path): path to evaluation reports for this run mlflow_tracking_uri (Path): tracking-uri used as mlflow's
-    backend-store
-
+    Attributes:
+         project_root (Path): repository's absolute path
+         run_name (str): run's folder name run_dir (Path): i.e. ``{self.project_root}/runs/{self.run_name}``
+         data_dir (Path): absolute path to dataset logger (logging.Logger): orchestrator's logger object
+         config (ConfigStruct): config_file parsed as a python object with nested attributes
+         project_name (str): repository's name
+         src_code_path (Path): absolute path to source code, i.e. ``{self.project_root}/{self.config.src_code_path}``, will be included in system paths
+         eval_report_dir (Path): path to evaluation reports for this run mlflow_tracking_uri (Path): tracking-uri used as mlflow's backend-store
+         generate_model_card (Bool): whether to generate model-card for this experiment's evaluation or not
 
     """
 
@@ -65,16 +67,16 @@ class Orchestrator:
                  data_dir: typing.Optional[Path],
                  project_root: Path,
                  eval_reports_dir: Path,
-                 mlflow_tracking_uri: typing.Union[str, Path]):
+                 mlflow_tracking_uri: typing.Union[str, Path],
+                 generate_model_card: bool = False):
+        self.do_generate_model_card = generate_model_card
+
         # Initialize the logger
         self.logger = get_logger('orchestrator')
 
         # Initialize paths
         self.project_root = project_root
         self.project_name = self.project_root.name
-        self.src_code_path = self.project_root.joinpath(self.config.src_code_path)
-        sys.path.append(str(self.src_code_path))
-        self.logger.info(f'{self.src_code_path} has been added to system paths.')
 
         self.run_name = run_name
         self.run_dir = project_root.joinpath('runs').joinpath(run_name)
@@ -83,12 +85,16 @@ class Orchestrator:
         self.exported_dir = self.run_dir.joinpath('exported')
         self.logger.info(f'will export to {self.exported_dir}')
 
+        # Load config file
+        self._load_config(data_dir)
+
+        self.src_code_path = self.project_root.joinpath(self.config.src_code_path)
+        sys.path.append(str(self.src_code_path))
+        self.logger.info(f'{self.src_code_path} has been added to system paths.')
+
         # Extract the code-version
         repo = git.Repo(self.project_root, search_parent_directories=False)
         self.code_version = repo.head.object.hexsha
-
-        # Load config file
-        self._load_config(data_dir)
 
         # Evaluation report directory
         self.eval_report_dir = eval_reports_dir.joinpath(self.project_name).joinpath(self.run_name)
@@ -118,7 +124,19 @@ class Orchestrator:
                                    val_report=DataFrameReport(summary_df=None, path=self.val_report_path))
 
     def run(self):
-        """Train, export, evaluate."""
+        """Train, export, evaluate.
+
+        Notes:
+            - Artifacts are:
+                - run_id.txt
+                - tensor-board-logs(logs)
+                - exported(savedmodel, config.yaml)
+                - eval_report(self.eval_report_path)
+                - val_report(self.val_report_path)
+                - model-card(optional)
+                - README.md(optional)
+
+        """
 
         try:
             # Training
@@ -133,10 +151,17 @@ class Orchestrator:
         eval_report, eval_report_val = self.evaluate()
 
         # Model-card generation
-        self._generate_model_card(val_report=eval_report_val, eval_report=eval_report)
+        if self.do_generate_model_card:
+            self.generate_model_card()
 
     def train(self):
         """train the model.
+
+        Notes:
+            - artifacts are:
+                - run_id.txt
+                - tensor-board-logs(logs)
+                - checkpoints
 
         Raises:
             ExportedExists
@@ -174,26 +199,60 @@ class Orchestrator:
                            n_iter_val=n_iter_val)
 
     def export(self):
+        """Export the model.
+
+        Notes:
+            - Artifacts are:
+                - exported(savedmodel, config.yaml)
+        """
+
         self.trainer.export(dict_config=self.config_as_dict)
         self.logger.info(f'exported to {self.trainer.exported_dir}.')
 
     def evaluate(self) -> typing.Tuple[pd.DataFrame, pd.DataFrame]:
-        """Just evaluate, if exported exists."""
+        """Just evaluate, if exported exists.
+
+        Notes:
+            - Artifacts are:
+                - eval_report(self.eval_report_path)
+                - val_report(self.val_report_path)
+
+        Raises:
+            Exported does not exist
+        """
 
         try:
             self.trainer.check_for_exported()
         except ExportedExists:
-            self.trainer.load_exported()
-            self.logger.info(f'evaluation will be done on this model: {self.trainer.exported_dir}')
+            model = self.model_builder.load(self.trainer.exported_model_path)
+            self.logger.info(f'evaluation will be done on this model: {self.trainer.exported_model_path}')
 
             active_run = self._setup_mlflow_active_run(is_evaluation=True)
 
-            eval_report_val = self._generate_eval_reports_validation(active_run)
-            eval_report = self._generate_eval_reports(active_run)
+            eval_report_val = self._generate_eval_reports_validation(active_run, model)
+            eval_report = self._generate_eval_reports(active_run, model)
 
             return eval_report, eval_report_val
         else:
             raise Exception(f'exported does not exist at {self.trainer.exported_dir}')
+
+    def generate_model_card(self):
+        """Generates the model-cards.
+
+        Notes:
+            - html model-card -> ``{project_name}/runs/{run-name}/model-card/model_cards/model_card.html``
+            - markdown model-card -> ``{project_name}/runs/{run-name}/README.md``
+        """
+
+        eval_report = pd.read_csv(self.eval_report_path, index_col=0)
+        val_report = pd.read_csv(self.val_report_path, index_col=0)
+
+        model_card_dir = self.run_dir.joinpath('model-card')
+        model_card = ModelCardGenerator(model_card_dir=model_card_dir)
+        self.logger.info(f'generating model-card which will be available as {model_card_dir}')
+        model_card.generate(config=self.config,
+                            val_eval_report=val_report,
+                            eval_eval_report=eval_report)
 
     def finalize(self):
         # TODO: commit self.artifacts to DVC
@@ -224,13 +283,15 @@ class Orchestrator:
         self.config.data_dir = str(self.data_dir)
         self.logger.info(f'data directory: {self.data_dir}')
 
-    def _generate_eval_reports_validation(self, train_active_run: mlflow.ActiveRun) -> pd.DataFrame:
+    def _generate_eval_reports_validation(self,
+                                          train_active_run: mlflow.ActiveRun,
+                                          model: ModelEvaluatorInterface) -> pd.DataFrame:
         # evaluate on validation data
         self.logger.info('evaluating on validation data...')
         val_index = self.data_loader.get_validation_index()
         eval_report_validation = self.evaluator.validation_evaluate(data_loader=self.data_loader,
                                                                     preprocessor=self.preprocessor,
-                                                                    model=self.model_builder,
+                                                                    model=ModelEvaluatorInterface,
                                                                     active_run=train_active_run,
                                                                     index=val_index)
 
@@ -242,13 +303,15 @@ class Orchestrator:
         # mlflow.log_artifact(str(self.val_report_path))
         return eval_report_validation
 
-    def _generate_eval_reports(self, active_run: mlflow.ActiveRun) -> pd.DataFrame:
+    def _generate_eval_reports(self,
+                               active_run: mlflow.ActiveRun,
+                               model: ModelEvaluatorInterface) -> pd.DataFrame:
         """evaluate on validation and test(evaluation) data."""
 
         self.logger.info('evaluating on evaluation data...')
         eval_report = self.evaluator.evaluate(data_loader=self.data_loader,
                                               preprocessor=self.preprocessor,
-                                              model=self.trainer.model_builder,
+                                              model=model,
                                               active_run=active_run)
         eval_report.to_csv(self.eval_report_path)
         # summary_report = eval_report.describe()
@@ -333,9 +396,11 @@ class Orchestrator:
         try:
             class_path = self.config.evaluator_class
         except AttributeError:
-            raise ConfigParamDoesNotExist('could not find evaluator_class in config file.')
+            self.logger.warning('could not find evaluator_class in config file, resuming with default evaluator')
+            evaluator = EvaluatorBase()
+        else:
+            evaluator = locate(class_path)()
 
-        evaluator = locate(class_path)(self.config)
         assert isinstance(evaluator, EvaluatorBase)
         self.logger.info('evaluator has been initialized.')
         return evaluator
@@ -377,18 +442,3 @@ class Orchestrator:
 
         self.logger.info(f'mlflow artifact-store-url for {sess_type} active-run: {mlflow.get_artifact_uri()}')
         return active_run
-
-    def _generate_model_card(self, val_report: pd.DataFrame, eval_report: pd.DataFrame):
-        """Generates model-cards.
-
-        Notes:
-            - html model-card -> ``{project_name}/runs/{run-name}/model-card/model_cards/model_card.html``
-            - markdown model-card -> ``{project_name}/runs/{run-name}/README.md``
-        """
-
-        model_card_dir = self.run_dir.joinpath('model-card')
-        model_card = ModelCardGenerator(model_card_dir=model_card_dir)
-        self.logger.info(f'generating model-card which will be available as {model_card_dir}')
-        model_card.generate(config=self.config,
-                            val_eval_report=val_report,
-                            eval_eval_report=eval_report)

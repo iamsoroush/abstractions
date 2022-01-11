@@ -68,9 +68,9 @@ def test_required_config_fields(config_path):
     assert hasattr(run_config.export, 'mode')
 
 
-@pytest.mark.init
-def test_train_script_existence():
-    """Testing whether train script exists in ``scripts`` or not"""
-
-    train_path = Path('scripts').joinpath('train.py')
-    assert train_path.is_file()
+# @pytest.mark.init
+# def test_train_script_existence():
+#     """Testing whether train script exists in ``scripts`` or not"""
+#
+#     train_path = Path('scripts').joinpath('train.py')
+#     assert train_path.is_file()

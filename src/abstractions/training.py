@@ -9,9 +9,10 @@ from pathlib import Path
 import tensorflow.keras as tfk
 import tensorflow.keras.callbacks as tfkc
 import mlflow
+import joblib
 
 from .base_class import BaseClass
-from .model_building import ModelBuilderBase, GenericModelBuilderBase
+from .model_building import ModelBuilderBase, GenericModelBuilderBase, BaseEstimator
 from .abs_exceptions import *
 from .utils import ConfigStruct
 
@@ -55,10 +56,6 @@ class TrainerBase(BaseClass, ABC):
         """
 
     @abstractmethod
-    def load_exported(self):
-        """Loads exported model into ``self.model_builder.model``."""
-
-    @abstractmethod
     def check_for_exported(self):
         """Checks for existence of exported model, if so, raises ``ExportedExists`` exception."""
 
@@ -95,7 +92,7 @@ class Trainer(TrainerBase):
         # Paths
         self.checkpoints_dir = self.run_dir.joinpath('checkpoints')
         self.tensorboard_log_dir = self.run_dir.joinpath('logs')
-        self.exported_saved_model_path = self.exported_dir.joinpath('savedmodel')
+        self.exported_model_path = self.exported_dir.joinpath('savedmodel')
 
         # Make logs and checkpoints directories
         self.checkpoints_dir.mkdir(exist_ok=True)
@@ -174,7 +171,7 @@ class Trainer(TrainerBase):
 
         # exported_saved_model_path = self.exported_dir.joinpath('savedmodel')
         exported_config_path = self.exported_dir.joinpath('config.yaml')
-        shutil.copytree(best_model_info['path'], self.exported_saved_model_path,
+        shutil.copytree(best_model_info['path'], self.exported_model_path,
                         symlinks=False, ignore=None, ignore_dangling_symlinks=False)
         # shutil.copy(self.config_file_path, exported_config_path)
         self._write_dict_to_yaml(dict_config, exported_config_path)
@@ -186,18 +183,12 @@ class Trainer(TrainerBase):
         # exported_model = tfk.models.load_model(self.exported_saved_model_path)
         # model_builder.model = exported_model
 
-    def load_exported(self):
-        """Loads exported model into ``self.model_builder.model``."""
-
-        exported_model = self.model_builder._load(self.exported_saved_model_path)
-        self.model_builder._model = exported_model
-
     def check_for_exported(self):
         """Raises exception if exported directory exists and contains ``savedmodel``"""
 
         if self.exported_dir.is_dir():
             if any(self.exported_dir.iterdir()):
-                if self.exported_saved_model_path.exists():
+                if self.exported_model_path.exists():
                     raise ExportedExists('exported files already exist.')
 
     def _get_callbacks(self, model_builder: ModelBuilderBase):
@@ -324,7 +315,8 @@ class GenericTrainer(TrainerBase):
                  model_builder: GenericModelBuilderBase):
         super().__init__(config=config, run_dir=run_dir, exported_dir=exported_dir, model_builder=model_builder)
         self.model_ = None
-        self.exported_model_path = None
+        self.model_file_name = 'model.joblib'
+        self.exported_model_path = self.exported_dir.joinpath(self.model_file_name)
 
     def _set_defaults(self):
         pass
@@ -373,20 +365,21 @@ class GenericTrainer(TrainerBase):
 
         """
 
+        if self.model_ is None:
+            raise Exception('there is no fitted model to export. call .fit and try again.')
+
         exported_config_path = self.exported_dir.joinpath('config.yaml')
         # shutil.copy(self.config_file_path, exported_config_path)
         self._write_dict_to_yaml(dict_config, exported_config_path)
-        self.exported_model_path = self.model_builder._export(self.exported_dir, self.model_)
+        self._export_to_path(self.exported_model_path, self.model_)
 
-    def load_exported(self):
-        """Loads exported model into ``self.model_builder.model``."""
-
-        loaded = self.model_builder._load(self.exported_dir)
-        self.model_builder._model = loaded
+    @staticmethod
+    def _export_to_path(export_model_path: Path, model: BaseEstimator):
+        joblib.dump(model, str(export_model_path))
 
     def check_for_exported(self):
         """Raises exception if exported directory exists and is not empty."""
 
         if self.exported_dir.is_dir():
-            if any(self.exported_dir.iterdir()):
+            if self.exported_model_path.is_file():
                 raise ExportedExists('exported files already exist.')

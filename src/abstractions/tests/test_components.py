@@ -614,7 +614,6 @@ class TestEvaluation:
     #                                               5,
     #                                               model)
 
-
     # @pytest.mark.dependency(depends=['TestEvaluation::test_get_eval_funcs'])
     # def test_eval_funcs(self, component_holder):
     #     compiled_model = component_holder['compiled_model']

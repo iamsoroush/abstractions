@@ -1,4 +1,4 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 import typing
 from pathlib import Path
 
@@ -6,57 +6,25 @@ import joblib
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras as tfk
-from sklearn.base import BaseEstimator
 
 from .base_class import BaseClass
+from .model_abs import BaseEstimator, TensorflowModel, GenericModel, ModelEvaluatorInterface
 
 
-class MBBase(BaseClass):
+class MBBase(BaseClass, ABC):
 
-    def __init__(self, config):
-        super().__init__(config=config)
-        self.model_ = None
-
-    @abstractmethod
-    def _evaluate(self,
-                  data_gen: typing.Iterator,
-                  n_iter: int) -> dict:
-        """Evaluation.
-
-        Args:
-            data_gen (Iterator): batch data generator, which yields (x_batch, y_batch) in each iteration.
-            n_iter (int): iterations needed to entirely cover the data-samples
-
-        Returns:
-            a dictionary containing averaged values across entire ``data_gen`` for internal metrics of the model, i.e. {met1: averaged_val, met2: averaged_val, ...}
-        """
-
-    @abstractmethod
-    def _predict(self,
-                 data_gen: typing.Iterator,
-                 n_iter: int) -> typing.Tuple[typing.Union[np.ndarray, tf.Tensor],
-                                              typing.Union[np.ndarray, tf.Tensor],
-                                              typing.Union[np.ndarray, tf.Tensor, list]]:
-        """Predict on a data generator which generates batches of data in each iteration.
-
-        Args:
-            data_gen (Iterator): batch data generator, which yields (x_batch, y_batch, sample_id_batch) in each iteration.
-            n_iter (int): iterations needed to entirely cover the data-samples
-
-        Returns:
-            tuple(predictions, labels, data_ids):
-            - predictions: predictions of the model for each data-sample, of ``shape(n_samples, ...)
-            - labels: labels for each data-sample, has the same shape as ``predictions``
-            - data_ids: data-id for each sample, of ``shape(n_samples,)``
-        """
-
-    @abstractmethod
-    def _load(self, exported_path: Path):
+    def load(self, exported_path: Path) -> ModelEvaluatorInterface:
         pass
 
 
 class ModelBuilderBase(MBBase):
     """Building and compiling ``tensorflow.keras`` models to train with Trainer.
+
+    Notes:
+        - you have to override these methods: ``get_compiled_model``
+        - you may override these methods too (optional): ``get_callbacks``, ``get_class_weight``
+        - don't override the private ``_{method_name}`` methods
+        - don't override these methods: ``
 
     Examples:
         >>> model_builder = ModelBuilder(config)
@@ -99,83 +67,9 @@ class ModelBuilderBase(MBBase):
 
         return None
 
-    def _evaluate(self,
-                  data_gen: typing.Iterator,
-                  n_iter: int) -> dict:
-        """Evaluation.
-
-        Args:
-            data_gen (Iterator): batch data generator, which yields (x_batch, y_batch) in each iteration.
-            n_iter (int): iterations needed to entirely cover the data-samples
-
-        Returns:
-            a dictionary containing averaged values across entire ``data_gen`` for internal metrics of the model, i.e. {met1: averaged_val, met2: averaged_val, ...}
-        """
-
-        return self._model.evaluate(data_gen, steps=n_iter, return_dict=True)
-
-    def _predict(self,
-                 data_gen: typing.Iterator,
-                 n_iter: int) -> typing.Tuple[typing.Any, typing.Any, typing.Any]:
-        """Predict on a data generator which generates batches of data in each iteration.
-
-        Args:
-            data_gen (Iterator): batch data generator, which yields (x_batch, y_batch, sample_id_batch) in each iteration.
-            n_iter (int): iterations needed to entirely cover the data-samples
-
-        Returns:
-            tuple(predictions, labels, data_ids):
-            - predictions: predictions of the model for each data-sample, of ``shape(n_samples, ...)
-            - labels: labels for each data-sample, has the same shape as ``predictions``
-            - data_ids: data-id for each sample, of ``shape(n_samples,)``
-        """
-
-        self._wrap_pred_step()
-        preds, gts, third_element = self._model.predict(data_gen, steps=n_iter)
-        return preds, gts, third_element
-
-    def _load(self, exported_path: Path) -> tfk.Model:
-        return tfk.models.load_model(exported_path)
-
-    def _wrap_pred_step(self):
-        """Overrides the ``predict`` method of the ``tfk.Model`` model.
-
-        By calling ``predict`` method of the model, three lists will be returned:
-         ``(predictions, ground truths, data_ids/sample_weights)``
-        """
-
-        def new_predict_step(data):
-            x, y, z = tfk.utils.unpack_x_y_sample_weight(data)
-            return self._model(x, training=False), y, z
-
-        setattr(self._model, 'predict_step', new_predict_step)
-    #
-    # @abstractmethod
-    # def post_process(self, y_pred):
-    #     """Define your post-processing, used for evaluation.
-    #
-    #     If you have ``softmax`` as your final layer, but your labels are sparse-categorical labels, you will need to
-    #      post-process the output of your model before comparing it to ``y_true``. In this case you should use
-    #      ``return np.argmax(y_pred)``.
-    #
-    #      Note: make sure that this is compatible with your evaluation functions and ground truth labels generated
-    #       using ``DataLoader``'s generators.
-    #
-    #      Args:
-    #          y_pred: a tensor generated by ``model.predict`` method. Note that the first dimension is ``batch``.
-    #
-    #     Returns:
-    #         post-processed batch of y_pred, ready to be compared to ground-truth.
-    #
-    #     """
-
-    @property
-    def _model(self) -> tfk.Model:
-        return self.model_
-
-    @_model.setter
-    def _model(self, new_model):
-        self.model_ = new_model
+    def load(self, exported_path: Path) -> TensorflowModel:
+        exported_model = tfk.models.load_model(exported_path)
+        return TensorflowModel(exported_model=exported_model)
 
     @classmethod
     def __subclasshook__(cls, c):
@@ -192,6 +86,19 @@ class ModelBuilderBase(MBBase):
 
 
 class GenericModelBuilderBase(MBBase):
+    """Model-builder for ``sklearn`` models to be trained using ``GenericTrainer``.
+
+    Notes:
+        - you have to override these methods: ``.fit``
+
+    Examples:
+        >>> model_builder = GenericModelBuilder(config)
+        >>> model_builder.fit(train_gen, n_iter_train, val_gen, n_iter_val)
+        >>> callbacks = model_builder.get_callbacks()
+        >>> class_weight = model_builder.get_class_weight()
+        >>> model.fit(train_gen, n_iter_train, callbacks=callbacks, class_weight=class_weight)
+
+    """
 
     def __init__(self, config):
         super().__init__(config=config)
@@ -203,73 +110,16 @@ class GenericModelBuilderBase(MBBase):
             n_iter_train: int,
             val_data_gen: typing.Iterator,
             n_iter_val: int) -> BaseEstimator:
-        """Fit/train your model here.
+        """Fit/train your model here, and return the fitted model
 
         """
 
-    @abstractmethod
-    def _evaluate(self,
-                  data_gen: typing.Iterator,
-                  n_iter: int) -> dict:
-        """Evaluation.
-
-        Args:
-            data_gen (Iterator): batch data generator, which yields (x_batch, y_batch) in each iteration.
-            n_iter (int): iterations needed to entirely cover the data-samples
-
-        Returns:
-            a dictionary containing averaged values across entire ``data_gen`` for internal metrics of the model, i.e. ``.score`` method's result for ``sklearn`` models.
-        """
-
-    @abstractmethod
-    def _predict(self,
-                 data_gen: typing.Iterator,
-                 n_iter: int) -> typing.Tuple[typing.Any, typing.Any, typing.Any]:
-        """Predict on a data generator which generates batches of data in each iteration.
-
-        Args:
-            data_gen (Iterator): batch data generator, which yields (x_batch, y_batch, sample_id_batch) in each iteration.
-            n_iter (int): iterations needed to entirely cover the data-samples
-
-        Returns:
-            tuple(predictions, labels, data_ids):
-            - predictions: predictions of the model for each data-sample, of ``shape(n_samples, ...)
-            - labels: labels for each data-sample, has the same shape as ``predictions``
-            - data_ids: data-id for each sample, of ``shape(n_samples,)``
-        """
-
-    def _export(self,
-                exported_dir: Path,
-                model: BaseEstimator) -> Path:
-        """Exports (writes) the model to the given directory as ``self.model_file_name``, and returns the exported model.
-
-        Notes:
-            - you can use ``joblib.dump(model, exported_dir.joinpath('exported.joblib'))``
-
-        """
-
-        export_file = exported_dir.joinpath(self.model_file_name)
-        self._export_to_path(export_file, model)
-        return export_file
-
-    def _load(self, exported_dir: Path) -> BaseEstimator:
+    def load(self, exported_dir: Path) -> GenericModel:
         export_file = exported_dir.joinpath(self.model_file_name)
         loaded = self._load_from_path(export_file)
-        return loaded
+        return GenericModel(loaded)
 
     @staticmethod
-    def _export_to_path(export_model_path: Path, model: BaseEstimator):
-        joblib.dump(model, str(export_model_path))
-
-    @staticmethod
-    def _load_from_path(exported_model_path: Path):
+    def _load_from_path(exported_model_path: Path) -> BaseEstimator:
         loaded = joblib.load(str(exported_model_path))
         return loaded
-
-    @property
-    def _model(self) -> BaseEstimator:
-        return self.model_
-
-    @_model.setter
-    def _model(self, new_model):
-        self.model_ = new_model

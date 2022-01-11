@@ -125,11 +125,13 @@ class ModelCardGenerator:
                                               slice='validation')
                 performance_metrics.append(pm)
 
-            fig, axes = plt.subplots(nrows=len(val_metric_names), ncols=1)
-            for i, col in enumerate(val_metric_names):
-                ax = axes[i]
-                ax.hist(val_df[col], bins=50)
-                ax.set_title(f'Distribution of {col}')
+                fig = self._plot_metrics(val_df, val_metric_names)
+            # fig, axes = plt.subplots(nrows=len(val_metric_names), ncols=1,
+            #                          figsize=(8, 4 * len(eval_metric_names)))
+            # for i, col in enumerate(val_metric_names):
+            #     ax = axes[i]
+            #     ax.hist(val_df[col], bins=50)
+            #     ax.set_title(f'Distribution of {col}')
             val_graphic = mctlib.Graphic(name='Eval Func distributions on validation data',
                                          image=figure_to_base64str(fig))
             graphics.append(val_graphic)
@@ -143,12 +145,13 @@ class ModelCardGenerator:
                                               slice='evaluation')
                 performance_metrics.append(pm)
 
-            fig, axes = plt.subplots(nrows=len(eval_metric_names), ncols=1,
-                                     figsize=(8, 4 * len(eval_metric_names)))
-            for i, col in enumerate(eval_metric_names):
-                ax = axes[i]
-                ax.hist(eval_df[col], bins=50)
-                ax.set_title(f'Distribution of {col}')
+                fig = self._plot_metrics(eval_df, eval_metric_names)
+            # fig, axes = plt.subplots(nrows=len(eval_metric_names), ncols=1,
+            #                          figsize=(8, 4 * len(eval_metric_names)))
+            # for i, col in enumerate(eval_metric_names):
+            #     ax = axes[i]
+            #     ax.hist(eval_df[col], bins=50)
+            #     ax.set_title(f'Distribution of {col}')
             eval_graphic = mctlib.Graphic(name='Eval Func distributions on evaluation data',
                                           image=figure_to_base64str(fig))
             graphics.append(eval_graphic)
@@ -156,3 +159,13 @@ class ModelCardGenerator:
         self.model_card.quantitative_analysis.performance_metrics = performance_metrics
         self.model_card.quantitative_analysis.graphics = mctlib.GraphicsCollection(description='EvalFunc distributions',
                                                                                    collection=graphics)
+
+    def _plot_metrics(self, df, metric_names):
+        fig, axes = plt.subplots(nrows=len(metric_names), ncols=1,
+                                 figsize=(8, 4 * len(metric_names)))
+        for i, col in enumerate(metric_names):
+            ax = axes[i]
+            ax.hist(df[col], bins=50)
+            ax.set_title(f'Distribution of {col}')
+
+        return fig

@@ -8,8 +8,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-from .base_class import BaseClass
-from .model_building import MBBase
+from .model_abs import ModelEvaluatorInterface
 from .data_loading import DataLoaderBase
 from .preprocessing import PreprocessorBase
 from aimedeval import EvalFunc
@@ -18,13 +17,13 @@ from aimedeval import EvalFunc
 # EvalFuncs = typing.Dict[str, typing.Callable]
 
 
-class EvalBase(BaseClass):
+class EvalBase:
 
     @abstractmethod
     def evaluate(self,
                  data_loader: DataLoaderBase,
                  preprocessor: PreprocessorBase,
-                 model: MBBase,
+                 model: ModelEvaluatorInterface,
                  active_run: mlflow.ActiveRun) -> pd.DataFrame:
         """Evaluate on evaluation(test) set."""
 
@@ -32,37 +31,42 @@ class EvalBase(BaseClass):
     def validation_evaluate(self,
                             data_loader: DataLoaderBase,
                             preprocessor: PreprocessorBase,
-                            exported_model: MBBase,
+                            model: ModelEvaluatorInterface,
                             active_run: typing.Optional[mlflow.ActiveRun],
                             index) -> pd.DataFrame:
         """Evaluate on validation set."""
 
-    @abstractmethod
-    def get_eval_funcs(self) -> typing.List[EvalFunc]:
+    def get_eval_funcs(self) -> typing.Optional[typing.List[EvalFunc]]:
         """Evaluation functions to use for evaluation.
 
-        You should take ``model.predict`` outputs into account. Your functions must take ``(y_true, y_pred)`` as
-        inputs (not batch), and return a single output for this data-point.
+        Notes:
+            - You should take ``model.predict`` outputs into account. Your functions must take ``(y_true, y_pred)`` as inputs (not batch), and return a single output for this data-point.
+            - if this method returns ``None`` (which is the default behavior), evaluator will log just the resluts of the ``model.evaluate``, and there will be no detailed report artifacts such as ``eval_report`` and ``val_eval_report``
 
         Returns:
             a list of ``EvalFunc``s``
 
         """
 
+        return None
+
 
 class EvaluatorBase(EvalBase, ABC):
+    # """
 
-    def _load_params(self, config):
-        pass
+    # Parameters:
+    #     model: a ``TensorflowModel`` or ``GenericModel`` that provides ``.evaluate`` and ``.predict`` method.
 
-    def _set_defaults(self):
-        pass
+    # """
+
+    # def __init__(self, model: ModelEvaluatorInterface):
+    #     self.model = model
 
     def evaluate(self,
                  data_loader: DataLoaderBase,
                  preprocessor: PreprocessorBase,
-                 model: MBBase,
-                 active_run: mlflow.ActiveRun) -> pd.DataFrame:
+                 model: ModelEvaluatorInterface,
+                 active_run: mlflow.ActiveRun) -> typing.Optional[pd.DataFrame]:
         """Evaluates the model using ``eval_functions`` defined in ``get_eval_functions`` on test dataset.
 
         Notes:
@@ -71,7 +75,7 @@ class EvaluatorBase(EvalBase, ABC):
         Args:
             data_loader: will be used for creating test-data-generator
             preprocessor: will be used to add image-preprocess to the test-data-generator
-            model: a ``ModelBuilder`` or ``GenericModelBuilder`` that provides ``.evaluate`` and ``.predict`` method.
+            model: a ``TensorflowModel`` or ``GenericModel`` that provides ``.evaluate`` and ``.predict`` method.
             active_run: mlflow's ``ActiveRun`` instance to log evaluation reports on.
 
         Returns:
@@ -93,28 +97,31 @@ class EvaluatorBase(EvalBase, ABC):
 
         eval_internal_metrics = dict()
         data_gen = iter(wrapper_gen(iter(test_data_gen)))
-        for k, v in model._evaluate(data_gen, n_iter_test).items():
+        for k, v in model.evaluate(data_gen, n_iter_test).items():
             eval_internal_metrics[f'_model.evaluate_{k}'] = v
         self._log_metrics_to_mlflow(active_run, eval_internal_metrics, prefix='test')
 
         # Eval funcs
-        test_data_gen, test_n = data_loader.create_test_generator()
-        test_data_gen = preprocessor.add_image_preprocess(test_data_gen)
-        test_data_gen = preprocessor.add_label_preprocess(test_data_gen)
-        test_data_gen, n_iter_test = preprocessor.batchify(test_data_gen, test_n)
+        if self.get_eval_funcs() is None:
+            return None
+        else:
+            test_data_gen, test_n = data_loader.create_test_generator()
+            test_data_gen = preprocessor.add_image_preprocess(test_data_gen)
+            test_data_gen = preprocessor.add_label_preprocess(test_data_gen)
+            test_data_gen, n_iter_test = preprocessor.batchify(test_data_gen, test_n)
 
-        preds, gts, data_ids = model._predict(test_data_gen, n_iter_test)
-        report_df = self._generate_eval_reports(preds, gts, data_ids)
-        self._log_df_report_to_mlflow(active_run, report_df, prefix='test')
+            preds, gts, data_ids = model.predict(test_data_gen, n_iter_test)
+            report_df = self._generate_eval_reports(preds, gts, data_ids)
+            self._log_df_report_to_mlflow(active_run, report_df, prefix='test')
 
-        return report_df
+            return report_df
 
     def validation_evaluate(self,
                             data_loader: DataLoaderBase,
                             preprocessor: PreprocessorBase,
-                            model: MBBase,
+                            model: ModelEvaluatorInterface,
                             active_run: typing.Optional[mlflow.ActiveRun],
-                            index) -> pd.DataFrame:
+                            index) -> typing.Optional[pd.DataFrame]:
         """Evaluates the model using ``eval_functions`` defined in ``get_eval_functions`` on validation dataset.
 
         Notes:
@@ -123,7 +130,7 @@ class EvaluatorBase(EvalBase, ABC):
         Args:
             data_loader: will be used for creating test-data-generator.
             preprocessor: will be used to add image-preprocess to the test-data-generator.
-            model: a ``ModelBuilder`` or ``GenericModelBuilder`` that provides ``.evaluate`` and ``.predict`` method.
+            model: a ``TensorflowModel`` or ``GenericModel`` that provides ``.evaluate`` and ``.predict`` method.
             active_run: mlflow's ``ActiveRun`` instance to log evaluation reports to.
             index: a list of ``data_id`` s to use as report data-frame's index. use this if your validation generator does not return a unique ``data_id`` as third element.
 
@@ -153,24 +160,27 @@ class EvaluatorBase(EvalBase, ABC):
 
         eval_internal_metrics = dict()
         data_gen = iter(wrapper_gen_dot_evaluate(iter(val_data_gen)))
-        for k, v in model._evaluate(data_gen, n_iter_val).items():
+        for k, v in model.evaluate(data_gen, n_iter_val).items():
             eval_internal_metrics[f'_model.evaluate_{k}'] = v
         self._log_metrics_to_mlflow(active_run, eval_internal_metrics, prefix='validation')
 
         # Eval funcs
-        val_data_gen, val_n = data_loader.create_validation_generator()
-        val_data_gen, n_iter_val = preprocessor.add_preprocess(val_data_gen, n_data_points=val_n)
-        if index is None:
-            index = np.array([[i] for i in range(val_n)])
-        elif np.array(index).ndim != 2:
-            index = np.array([[i] for i in index])
+        if self.get_eval_funcs() is None:
+            return None
+        else:
+            val_data_gen, val_n = data_loader.create_validation_generator()
+            val_data_gen, n_iter_val = preprocessor.add_preprocess(val_data_gen, n_data_points=val_n)
+            if index is None:
+                index = np.array([[i] for i in range(val_n)])
+            elif np.array(index).ndim != 2:
+                index = np.array([[i] for i in index])
 
-        data_gen = iter(wrapper_gen_dot_predict(iter(val_data_gen), index))
-        preds, gts, data_ids = model._predict(data_gen, n_iter_val)
-        report_df = self._generate_eval_reports(preds, gts, data_ids)
-        self._log_df_report_to_mlflow(active_run, report_df, prefix='validation')
+            data_gen = iter(wrapper_gen_dot_predict(iter(val_data_gen), index))
+            preds, gts, data_ids = model.predict(data_gen, n_iter_val)
+            report_df = self._generate_eval_reports(preds, gts, data_ids)
+            self._log_df_report_to_mlflow(active_run, report_df, prefix='validation')
 
-        return report_df
+            return report_df
 
     @staticmethod
     def _log_df_report_to_mlflow(active_run: typing.Optional[mlflow.ActiveRun], report_df: pd.DataFrame, prefix='test'):
