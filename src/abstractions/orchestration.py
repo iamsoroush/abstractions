@@ -13,8 +13,8 @@ from . import DataLoaderBase, AugmentorBase, PreprocessorBase, ModelBuilderBase,
     GenericTrainer, EvaluatorBase
 from .utils import load_config_file, check_for_config_file, get_logger, setup_mlflow, add_config_file_to_mlflow,\
     load_config_as_dict
-from model_abs import ModelEvaluatorInterface
-from .model_card import ModelCardGenerator
+from .model_abs import ModelEvaluatorInterface
+# from .model_card import ModelCardGenerator
 from .abs_exceptions import *
 
 
@@ -248,11 +248,11 @@ class Orchestrator:
         val_report = pd.read_csv(self.val_report_path, index_col=0)
 
         model_card_dir = self.run_dir.joinpath('model-card')
-        model_card = ModelCardGenerator(model_card_dir=model_card_dir)
-        self.logger.info(f'generating model-card which will be available as {model_card_dir}')
-        model_card.generate(config=self.config,
-                            val_eval_report=val_report,
-                            eval_eval_report=eval_report)
+        # model_card = ModelCardGenerator(model_card_dir=model_card_dir)
+        # self.logger.info(f'generating model-card which will be available as {model_card_dir}')
+        # model_card.generate(config=self.config,
+        #                     val_eval_report=val_report,
+        #                     eval_eval_report=eval_report)
 
     def finalize(self):
         # TODO: commit self.artifacts to DVC
@@ -329,7 +329,7 @@ class Orchestrator:
         except AttributeError:
             raise ConfigParamDoesNotExist('could not find data_loader_class in config file.')
         try:
-            data_loader = locate(class_path)(self.config, self.data_dir)
+            data_loader = locate(class_path)(self.config)
         except TypeError as e:
             self.logger.error(f"class:{class_path} for data_loader is not defined!")
             raise e
