@@ -38,7 +38,7 @@ def run_config(pytestconfig):
     return config
 
 
-# @pytest.mark.component
+@pytest.mark.dependency
 @pytest.mark.dataloader
 class TestDataLoader:
 
@@ -160,88 +160,18 @@ class TestDataLoader:
                                      mode=["bold", "underline"])
 
 
-@pytest.mark.model
-class TestModel:
-    def test_locate_model_builder_class(self, run_config, component_holder):
-        """Whether package can locate model_builder_class"""
-
-        model_builder_class = locate(run_config.model_builder_class)
-        assert model_builder_class is not None
-        component_holder['model_builder_class'] = model_builder_class
-
-    @pytest.mark.dependency(depends=['TestModel::test_locate_model_builder_class'])
-    def test_initialize_model_builder(self, run_config, component_holder):
-        """Whether model_builder could be initialized correctly."""
-
-        model_builder = component_holder.get('model_builder_class')(run_config)
-        assert isinstance(model_builder, ModelBuilderBase)
-        component_holder['model_builder'] = model_builder
-
-    # @pytest.mark.dependency(depends=['TestPreprocessor::test_train_preprocess_generator'])
-    # def test_get_compiled_model(self, run_config, component_holder):
-    #     model_builder = component_holder['model_builder']
-    #     compiled_model = model_builder.get_compiled_model()
-    #     assert True
-    #
-    #     component_holder['compiled_model'] = compiled_model
-
-
-@pytest.mark.component
-@pytest.mark.dependency
-class TestLocateComponents:
-
-    # def test_locate_data_loader_class(self, run_config, component_holder):
-    #     """Whether package can locate data_loader_class. The relative address for data_loader_class is set in config.yaml"""
-    #
-    #     data_loader_class = locate(run_config.data_loader_class)
-    #     assert data_loader_class is not None
-    #     component_holder['data_loader_class'] = data_loader_class
-
+@pytest.mark.augmentation
+class TestAugmentor(TestDataLoader):
     def test_locate_augmentor_class(self, run_config, component_holder):
-        """Whether package can locate augmentor_class. The relative address for augmentor_class is set in config.yaml. Ignore this error if you don't have an agumentor class"""
-
-        if not hasattr(run_config, 'augmentor_class'):
+        if not hasattr(run_config, 'augmentor_class') or run_config.augmentor_class is None:
             assert True
         else:
+            print(f"augmentor_class: {run_config.augmentor_class}")
             augmentor_class = locate(run_config.augmentor_class)
             assert augmentor_class is not None
             component_holder['augmentor_class'] = augmentor_class
 
-    def test_locate_preprocessor_class(self, run_config, component_holder):
-        """if package can locate preprocessor_class"""
-
-        preprocessor_class = locate(run_config.preprocessor_class)
-        assert preprocessor_class is not None
-        component_holder['preprocessor_class'] = preprocessor_class
-
-    def test_locate_model_builder_class(self, run_config, component_holder):
-        """if package can locate model_builder_class"""
-
-        model_builder_class = locate(run_config.model_builder_class)
-        assert model_builder_class is not None
-        component_holder['model_builder_class'] = model_builder_class
-
-    def test_locate_evaluator_class(self, run_config, component_holder):
-        """if package can locate evaluator_class"""
-
-        evaluator_class = locate(run_config.evaluator_class)
-        assert evaluator_class is not None
-        component_holder['evaluator_class'] = evaluator_class
-
-
-@pytest.mark.component
-class TestInitializeComponents:
-
-    # @pytest.mark.dependency(depends=['TestLocateComponents::test_locate_data_loader_class'])
-    # def test_initialize_data_loader(self, run_config, component_holder):
-    #     """if data_loader could be initialized correctly."""
-    #
-    #     data_dir = Path(run_config.data_dir)
-    #     data_loader = component_holder.get('data_loader_class')(run_config, data_dir)
-    #     assert isinstance(data_loader, DataLoaderBase)
-    #     component_holder['data_loader'] = data_loader
-
-    @pytest.mark.dependency(depends=['TestLocateComponents::test_locate_augmentor_class'])
+    @pytest.mark.dependency(depends=['TestAugmentor::test_locate_augmentor_class'])
     def test_initialize_augmentor(self, run_config, component_holder):
         """if augmentor could be initialized correctly."""
 
@@ -250,34 +180,6 @@ class TestInitializeComponents:
             augmentor = augmentor_class(run_config)
             assert isinstance(augmentor, AugmentorBase)
             component_holder['augmentor'] = augmentor
-
-    @pytest.mark.dependency(depends=['TestLocateComponents::test_locate_preprocessor_class'])
-    def test_initialize_preprocessor(self, run_config, component_holder):
-        """if preprocessor could be initialized correctly."""
-
-        preprocessor = component_holder.get('preprocessor_class')(run_config)
-        assert isinstance(preprocessor, PreprocessorBase)
-        component_holder['preprocessor'] = preprocessor
-
-    @pytest.mark.dependency(depends=['TestLocateComponents::test_locate_model_builder_class'])
-    def test_initialize_model_builder(self, run_config, component_holder):
-        """if model_builder could be initialized correctly."""
-
-        model_builder = component_holder.get('model_builder_class')(run_config)
-        assert isinstance(model_builder, ModelBuilderBase)
-        component_holder['model_builder'] = model_builder
-
-    @pytest.mark.dependency(depends=['TestLocateComponents::test_locate_evaluator_class'])
-    def test_initialize_evaluator(self, run_config, component_holder):
-        """if evaluator could be initialized correctly."""
-
-        evaluator = component_holder.get('evaluator_class')(run_config)
-        assert isinstance(evaluator, EvaluatorBase)
-        component_holder['evaluator'] = evaluator
-
-
-@pytest.mark.component
-class TestAugmentor:
 
     # ---------- Train Augmentation ----------
     @pytest.mark.dependency(depends=['TestDataLoader::test_train_generator'])
@@ -293,9 +195,19 @@ class TestAugmentor:
 
     @pytest.mark.dependency(depends=['TestAugmentor::test_add_train_augmentation'])
     def test_train_augmentation_out(self, run_config, component_holder):
-        train_data_gen = component_holder['train_data_gen']
-        ret = next(iter(train_data_gen))
-        assert len(ret) == 3
+        try:
+            train_data_gen = component_holder['train_data_gen']
+            ret = next(iter(train_data_gen))
+            assert len(
+                ret) == 3, color_str(
+                f"Generator returns two components. Ignore this message if you don't have weights for your samples",
+                "yellow", mode="bold") if len(
+                ret) == 2 else color_str("Generator does not return a proper number of outputs!", "red",
+                                         mode=["bold", "underline"])
+        except Exception as e:
+            raise Exception(color_str(
+                f"Error {e}, If you don't have augmentor class ignore this message", "yellow",
+                mode=["bold"]))
 
     # ---------- Validation Augmentation ----------
     @pytest.mark.dependency(depends=['TestDataLoader::test_validation_generator'])
@@ -311,13 +223,37 @@ class TestAugmentor:
 
     @pytest.mark.dependency(depends=['TestAugmentor::test_add_validation_augmentation'])
     def test_validation_augmentation_out(self, run_config, component_holder):
-        data_gen = component_holder['validation_data_gen']
-        ret = next(iter(data_gen))
-        assert len(ret) == 3
+        try:
+            data_gen = component_holder['validation_data_gen']
+            ret = next(iter(data_gen))
+            assert len(
+                ret) == 3, color_str(
+                f"Generator returns two components. Ignore this message if you don't have weights for your samples",
+                "yellow", mode="bold") if len(
+                ret) == 2 else color_str("Generator does not return a proper number of outputs!", "red",
+                                         mode=["bold", "underline"])
+        except Exception as e:
+            raise Exception(color_str(
+                f"Error {e}, If you don't have augmentor class ignore this message", "yellow",
+                mode=["bold"]))
 
 
-@pytest.mark.component
-class TestPreprocessor:
+@pytest.mark.preprocessor
+class TestPreprocessor(TestAugmentor):
+    def test_locate_preprocessor_class(self, run_config, component_holder):
+        """if package can locate preprocessor_class"""
+
+        preprocessor_class = locate(run_config.preprocessor_class)
+        assert preprocessor_class is not None
+        component_holder['preprocessor_class'] = preprocessor_class
+
+    @pytest.mark.dependency(depends=['TestPreprocessor::test_locate_preprocessor_class'])
+    def test_initialize_preprocessor(self, run_config, component_holder):
+        """if preprocessor could be initialized correctly."""
+
+        preprocessor = component_holder.get('preprocessor_class')(run_config)
+        assert isinstance(preprocessor, PreprocessorBase)
+        component_holder['preprocessor'] = preprocessor
 
     # ---------- Train Preprocessing ----------
     @pytest.mark.dependency(depends=['TestAugmentor::test_add_train_augmentation'])
@@ -345,12 +281,18 @@ class TestPreprocessor:
     def test_train_gen_out(self, run_config, component_holder):
         train_gen = component_holder['train_data_gen']
         ret = next(iter(train_gen))
-        assert len(ret) == 3
+        assert 2 <= len(ret) < 4, color_str("Generator does not return a proper number of outputs!", "red",
+                                            mode=["bold", "underline"])
 
-        x_batch, y_batch, w_batch = ret
-        component_holder['train_gen_xb_shape'] = tuple(x_batch.shape)
-        component_holder['train_gen_yb_shape'] = tuple(y_batch.shape)
-        component_holder['train_gen_wb'] = w_batch
+        if len(ret) == 3:
+            x_batch, y_batch, w_batch = ret
+            component_holder['train_gen_xb_shape'] = tuple(x_batch.shape)
+            component_holder['train_gen_yb_shape'] = tuple(y_batch.shape)
+            component_holder['train_gen_wb'] = w_batch
+        else:
+            x_batch, y_batch = ret
+            component_holder['train_gen_xb_shape'] = tuple(x_batch.shape)
+            component_holder['train_gen_yb_shape'] = tuple(y_batch.shape)
 
     @pytest.mark.dependency(depends=['TestPreprocessor::test_train_gen_out'])
     def test_train_gen_x_shape(self, run_config, component_holder):
@@ -368,14 +310,25 @@ class TestPreprocessor:
 
     @pytest.mark.dependency(depends=['TestPreprocessor::test_train_gen_out'])
     def test_train_gen_w_batch_size(self, run_config, component_holder):
-        w_batch = component_holder['train_gen_wb']
-        assert len(w_batch) == int(run_config.batch_size)
+        try:
+            w_batch = component_holder['train_gen_wb']
+            assert len(w_batch) == int(run_config.batch_size)
+        except Exception as e:
+            raise Exception(color_str(
+                f"Error {e}, If you don't have weights for your samples, ignore this message", "yellow",
+                mode=["bold"]))
 
     @pytest.mark.dependency(depends=['TestPreprocessor::test_train_gen_out'])
     def test_train_gen_w_is_iterable(self, run_config, component_holder):
-        w_batch = component_holder['train_gen_wb']
-        assert hasattr(w_batch[0],
-                       '__iter__'), 'elements of the weights_batch are not iterables, add a new axis to each element.'
+        try:
+            w_batch = component_holder['train_gen_wb']
+            assert hasattr(w_batch[0], '__iter__'), color_str(
+                "Elements of the weights_batch are not iterables, add a new axis to each element.",
+                "yellow", mode=["bold"])
+        except Exception as e:
+            raise Exception(color_str(
+                f"Error {e}, If you don't have weights for your samples, ignore this message", "yellow",
+                mode=["bold"]))
 
     # ---------- Validation Preprocessing ----------
     @pytest.mark.dependency(depends=['TestAugmentor::test_add_validation_augmentation'])
@@ -403,12 +356,17 @@ class TestPreprocessor:
     def test_validation_gen_out(self, run_config, component_holder):
         gen = component_holder['validation_data_gen']
         ret = next(iter(gen))
-        assert len(ret) == 3
-
-        x_batch, y_batch, w_batch = ret
-        component_holder['validation_gen_xb_shape'] = tuple(x_batch.shape)
-        component_holder['validation_gen_yb_shape'] = tuple(y_batch.shape)
-        component_holder['validation_gen_wb'] = w_batch
+        assert 2 <= len(ret) < 4, color_str("Generator does not return a proper number of outputs!", "red",
+                                            mode=["bold", "underline"])
+        if len(ret) == 3:
+            x_batch, y_batch, w_batch = ret
+            component_holder['validation_gen_xb_shape'] = tuple(x_batch.shape)
+            component_holder['validation_gen_yb_shape'] = tuple(y_batch.shape)
+            component_holder['validation_gen_wb'] = w_batch
+        else:
+            x_batch, y_batch = ret
+            component_holder['validation_gen_xb_shape'] = tuple(x_batch.shape)
+            component_holder['validation_gen_yb_shape'] = tuple(y_batch.shape)
 
     @pytest.mark.dependency(depends=['TestPreprocessor::test_validation_gen_out'])
     def test_validation_gen_x_shape(self, run_config, component_holder):
@@ -426,14 +384,25 @@ class TestPreprocessor:
 
     @pytest.mark.dependency(depends=['TestPreprocessor::test_validation_gen_out'])
     def test_validation_gen_w_batch_size(self, run_config, component_holder):
-        w_batch = component_holder['validation_gen_wb']
-        assert len(w_batch) == int(run_config.batch_size)
+        try:
+            w_batch = component_holder['validation_gen_wb']
+            assert len(w_batch) == int(run_config.batch_size)
+        except Exception as e:
+            raise Exception(color_str(
+                f"Error {e}, If you don't have weights for your samples, ignore this message", "yellow",
+                mode=["bold"]))
 
     @pytest.mark.dependency(depends=['TestPreprocessor::test_validation_gen_out'])
     def test_validation_gen_w_is_iterable(self, run_config, component_holder):
-        w_batch = component_holder['validation_gen_wb']
-        assert hasattr(w_batch[0],
-                       '__iter__'), 'elements of the weights_batch are not iterables, add a new axis to each element.'
+        try:
+            w_batch = component_holder['validation_gen_wb']
+            assert hasattr(w_batch[0], '__iter__'), color_str(
+                "Elements of the weights_batch are not iterables, add a new axis to each element.",
+                "yellow", mode=["bold"])
+        except Exception as e:
+            raise Exception(color_str(
+                f"Error {e}, If you don't have weights for your samples, ignore this message", "yellow",
+                mode=["bold"]))
 
     # ---------- Evaluation Preprocessing ----------
     @pytest.mark.dependency(depends=['TestDataLoader::test_evaluation_generator'])
@@ -461,12 +430,29 @@ class TestPreprocessor:
     def test_evaluation_gen_out(self, run_config, component_holder):
         gen = component_holder['evaluation_data_gen']
         ret = next(iter(gen))
-        assert len(ret) == 3
+        assert 2 <= len(ret) < 4, color_str("Generator does not return a proper number of outputs!", "red",
+                                            mode=["bold", "underline"])
+        if len(ret) == 3:
+            x_batch, y_batch, w_batch = ret
+            component_holder['evaluation_gen_xb_shape'] = tuple(x_batch.shape)
+            component_holder['evaluation_gen_yb_shape'] = tuple(y_batch.shape)
+            component_holder['evaluation_gen_wb'] = w_batch
+        else:
+            x_batch, y_batch = ret
+            component_holder['evaluation_gen_xb_shape'] = tuple(x_batch.shape)
+            component_holder['evaluation_gen_yb_shape'] = tuple(y_batch.shape)
 
-        x_batch, y_batch, w_batch = ret
-        component_holder['evaluation_gen_xb_shape'] = tuple(x_batch.shape)
-        component_holder['evaluation_gen_yb_shape'] = tuple(y_batch.shape)
-        component_holder['evaluation_gen_id'] = w_batch
+    @pytest.mark.dependency(depends=['TestPreprocessor::test_evaluation_gen_out'])
+    def test_evaluation_gen_w_is_iterable(self, run_config, component_holder):
+        try:
+            w_batch = component_holder['evaluation_gen_wb']
+            assert hasattr(w_batch[0], '__iter__'), color_str(
+                "Elements of the weights_batch are not iterables, add a new axis to each element.",
+                "yellow", mode=["bold"])
+        except Exception as e:
+            raise Exception(color_str(
+                f"Error {e}, If you don't have weights for your samples, ignore this message", "yellow",
+                mode=["bold"]))
 
     @pytest.mark.dependency(depends=['TestPreprocessor::test_evaluation_gen_out'])
     def test_evaluation_gen_x_shape(self, run_config, component_holder):
@@ -484,129 +470,421 @@ class TestPreprocessor:
 
     @pytest.mark.dependency(depends=['TestPreprocessor::test_evaluation_gen_out'])
     def test_evaluation_gen_w_batch_size(self, run_config, component_holder):
-        id_batch = component_holder['evaluation_gen_id']
-        assert len(id_batch) == int(run_config.batch_size)
-
-    # @pytest.mark.dependency(depends=['TestPreprocessor::test_evaluation_gen_out'])
-    # def test_evaluation_gen_w_is_iterable(self, run_config, component_holder):
-    #     w_batch = component_holder['evaluation_gen_wb']
-    #     assert hasattr(w_batch[0],
-    #                    '__iter__'), 'elements of the weights_batch are not iterables, add a new axis to each element.'
-
-
-@pytest.mark.modelbuilder
-class TestModelBuilder(TestPreprocessor):
-
-    @pytest.mark.dependency(depends=['TestPreprocessor::test_train_preprocess_generator'])
-    def test_get_compiled_model(self, run_config, component_holder):
-        model_builder = component_holder['model_builder']
-        compiled_model = model_builder.get_compiled_model()
-        assert True
-
-        component_holder['compiled_model'] = compiled_model
-
-    @pytest.mark.dependency(depends=['TestModelBuilder::test_get_compiled_model',
-                                     'TestPreprocessor::test_train_preprocess_generator', ])
-    def test_model_train_gen_compatibility(self, run_config, component_holder):
-        compiled_model = component_holder['compiled_model']
-        _, input_h, input_w, n_channels = compiled_model.input_shape
-
-        train_gen = component_holder['train_data_gen']
-        x_b, y_b, w_b = next(iter(train_gen))
-
-        compiled_model.evaluate(x=x_b, y=y_b, sample_weight=w_b)
-        assert True
-
-        # assert input_h == int(run_config.input_height)
-        # assert input_w == int(run_config.input_width)
-        # assert n_channels == int(component_holder['input_channels'])
-
-    @pytest.mark.dependency(depends=['TestModelBuilder::test_get_compiled_model',
-                                     'TestPreprocessor::test_validation_preprocess_generator', ])
-    def test_model_validation_gen_compatibility(self, run_config, component_holder):
-        compiled_model = component_holder['compiled_model']
-        _, input_h, input_w, n_channels = compiled_model.input_shape
-
-        gen = component_holder['validation_data_gen']
-        x_b, y_b, w_b = next(iter(gen))
-
-        compiled_model.evaluate(x=x_b, y=y_b, sample_weight=w_b)
-        assert True
-
-        # assert input_h == int(run_config.input_height)
-        # assert input_w == int(run_config.input_width)
-        # assert n_channels == int(component_holder['input_channels'])
+        try:
+            id_batch = component_holder['evaluation_gen_wb']
+            assert len(id_batch) == int(run_config.batch_size)
+        except Exception as e:
+            raise Exception(color_str(
+                f"Error {e}, If you don't have weights for your samples, ignore this message", "yellow",
+                mode=["bold"]))
 
 
-@pytest.mark.component
-class TestEvaluation:
+@pytest.mark.model
+class TestModel:
+    def test_locate_model_builder_class(self, run_config, component_holder):
+        """Whether package can locate model_builder_class"""
 
-    @pytest.mark.dependency(depends=['TestInitializeComponents::test_initialize_evaluator',
-                                     'TestPreprocessor::test_evaluation_gen_out'])
-    def test_eval_funcs(self, component_holder):
-        evaluator = component_holder['evaluator']
-        eval_funcs = evaluator.get_eval_funcs()
+        model_builder_class = locate(run_config.model_builder_class)
+        assert model_builder_class is not None
+        component_holder['model_builder_class'] = model_builder_class
 
-        compiled_model = component_holder['compiled_model']
-        data_gen = component_holder['evaluation_data_gen']
-        x_b, y_b, _ = next(iter(data_gen))
-        x_sample = x_b[0]
-        y_sample = y_b[0]
-        y_pred = compiled_model.predict(np.expand_dims(x_sample, axis=0))[0]
+    @pytest.mark.dependency(depends=['TestModel::test_locate_model_builder_class'])
+    def test_initialize_model_builder(self, run_config, component_holder):
+        """Whether model_builder could be initialized correctly."""
 
-        failed_funcs = list()
-        for f_name, f in eval_funcs.items():
-            if not (isinstance(f_name, str) or isinstance(f, FunctionType)):
-                failed_funcs.append(f_name)
-            else:
-                try:
-                    f(y_sample, y_pred)
-                except Exception as e:
-                    failed_funcs.append(f_name)
+        model_builder = component_holder.get('model_builder_class')(run_config)
+        assert isinstance(model_builder, ModelBuilderBase)
+        component_holder['model_builder'] = model_builder
 
-        if any(failed_funcs):
-            pytest.fail(f'failed {len(failed_funcs)}/{len(eval_funcs)}. failed funcs are {failed_funcs}')
+    # @pytest.mark.dependency(depends=['TestPreprocessor::test_train_preprocess_generator'])
+    # def test_get_compiled_model(self, run_config, component_holder):
+    #     model_builder = component_holder['model_builder']
+    #     compiled_model = model_builder.get_compiled_model()
+    #     assert True
+    #
+    #     component_holder['compiled_model'] = compiled_model
+
+# @pytest.mark.component
+# @pytest.mark.dependency
+# class TestLocateComponents:
+
+# def test_locate_data_loader_class(self, run_config, component_holder):
+#     """Whether package can locate data_loader_class. The relative address for data_loader_class is set in config.yaml"""
+#
+#     data_loader_class = locate(run_config.data_loader_class)
+#     assert data_loader_class is not None
+#     component_holder['data_loader_class'] = data_loader_class
+
+# def test_locate_augmentor_class(self, run_config, component_holder):
+#     """Whether package can locate augmentor_class. The relative address for augmentor_class is set in config.yaml. Ignore this error if you don't have an agumentor class"""
+#
+#     if not hasattr(run_config, 'augmentor_class'):
+#         assert True
+#     else:
+#         augmentor_class = locate(run_config.augmentor_class)
+#         assert augmentor_class is not None
+#         component_holder['augmentor_class'] = augmentor_class
+#
+# def test_locate_preprocessor_class(self, run_config, component_holder):
+#     """if package can locate preprocessor_class"""
+#
+#     preprocessor_class = locate(run_config.preprocessor_class)
+#     assert preprocessor_class is not None
+#     component_holder['preprocessor_class'] = preprocessor_class
+#
+# def test_locate_model_builder_class(self, run_config, component_holder):
+#     """if package can locate model_builder_class"""
+#
+#     model_builder_class = locate(run_config.model_builder_class)
+#     assert model_builder_class is not None
+#     component_holder['model_builder_class'] = model_builder_class
+#
+# def test_locate_evaluator_class(self, run_config, component_holder):
+#     """if package can locate evaluator_class"""
+#
+#     evaluator_class = locate(run_config.evaluator_class)
+#     assert evaluator_class is not None
+#     component_holder['evaluator_class'] = evaluator_class
 
 
-@pytest.mark.component
-class TestTraining:
+# @pytest.mark.component
+# class TestInitializeComponents:
 
-    @pytest.mark.dependency(depends=['TestEvaluation::test_eval_funcs'])
-    def test_model_training(self, run_config, component_holder):
-        """Simple model fit, with 3 batches per epoch, for 3 epochs."""
+# @pytest.mark.dependency(depends=['TestLocateComponents::test_locate_data_loader_class'])
+# def test_initialize_data_loader(self, run_config, component_holder):
+#     """if data_loader could be initialized correctly."""
+#
+#     data_dir = Path(run_config.data_dir)
+#     data_loader = component_holder.get('data_loader_class')(run_config, data_dir)
+#     assert isinstance(data_loader, DataLoaderBase)
+#     component_holder['data_loader'] = data_loader
 
-        model = component_holder['compiled_model']
-        train_gen = component_holder['train_data_gen']
-        val_gen = component_holder['validation_data_gen']
+# @pytest.mark.dependency(depends=['TestLocateComponents::test_locate_augmentor_class'])
+# def test_initialize_augmentor(self, run_config, component_holder):
+#     """if augmentor could be initialized correctly."""
+#
+#     augmentor_class = component_holder.get('augmentor_class')
+#     if augmentor_class is not None:
+#         augmentor = augmentor_class(run_config)
+#         assert isinstance(augmentor, AugmentorBase)
+#         component_holder['augmentor'] = augmentor
 
-        x_tr, y_tr, w_tr = next(iter(train_gen))
-        x_val, y_val, w_val = next(iter(val_gen))
+# @pytest.mark.dependency(depends=['TestLocateComponents::test_locate_preprocessor_class'])
+# def test_initialize_preprocessor(self, run_config, component_holder):
+#     """if preprocessor could be initialized correctly."""
+#
+#     preprocessor = component_holder.get('preprocessor_class')(run_config)
+#     assert isinstance(preprocessor, PreprocessorBase)
+#     component_holder['preprocessor'] = preprocessor
+#
+# @pytest.mark.dependency(depends=['TestLocateComponents::test_locate_model_builder_class'])
+# def test_initialize_model_builder(self, run_config, component_holder):
+#     """if model_builder could be initialized correctly."""
+#
+#     model_builder = component_holder.get('model_builder_class')(run_config)
+#     assert isinstance(model_builder, ModelBuilderBase)
+#     component_holder['model_builder'] = model_builder
+#
+# @pytest.mark.dependency(depends=['TestLocateComponents::test_locate_evaluator_class'])
+# def test_initialize_evaluator(self, run_config, component_holder):
+#     """if evaluator could be initialized correctly."""
+#
+#     evaluator = component_holder.get('evaluator_class')(run_config)
+#     assert isinstance(evaluator, EvaluatorBase)
+#     component_holder['evaluator'] = evaluator
 
-        initial_tr_loss = model.evaluate(x_tr, y_tr, sample_weight=w_tr, return_dict=True)['loss']
-        initial_val_loss = model.evaluate(x_val, y_val, sample_weight=w_val, return_dict=True)['loss']
 
-        epochs = 3
+# @pytest.mark.component
+# class TestPreprocessor:
 
-        history = model.fit(x_tr,
-                            y_tr,
-                            epochs=epochs,
-                            sample_weight=w_tr,
-                            validation_data=(x_val, y_val, w_val))
-        assert True
+# # ---------- Train Preprocessing ----------
+# @pytest.mark.dependency(depends=['TestAugmentor::test_add_train_augmentation'])
+# def test_add_train_preprocessing(self, run_config, component_holder):
+#     preprocessor = component_holder['preprocessor']
+#     train_data_gen = component_holder['train_data_gen']
+#     train_n = component_holder['train_n']
+#
+#     ret = preprocessor.add_preprocess(train_data_gen, train_n)
+#     assert len(ret) == 2
+#
+#     train_gen, n_iter_train = ret
+#     component_holder['train_data_gen'] = train_gen
+#     component_holder['n_iter_train'] = n_iter_train
+#
+# @pytest.mark.dependency(depends=['TestPreprocessor::test_add_train_preprocessing'])
+# def test_train_preprocess_generator(self, run_config, component_holder):
+#     assert hasattr(component_holder['train_data_gen'], '__iter__')
+#
+# @pytest.mark.dependency(depends=['TestPreprocessor::test_add_train_preprocessing'])
+# def test_train_preprocess_n_iter(self, run_config, component_holder):
+#     assert isinstance(component_holder['n_iter_train'], int)
+#
+# @pytest.mark.dependency(depends=['TestPreprocessor::test_train_preprocess_generator'])
+# def test_train_gen_out(self, run_config, component_holder):
+#     train_gen = component_holder['train_data_gen']
+#     ret = next(iter(train_gen))
+#     assert len(ret) == 3
+#
+#     x_batch, y_batch, w_batch = ret
+#     component_holder['train_gen_xb_shape'] = tuple(x_batch.shape)
+#     component_holder['train_gen_yb_shape'] = tuple(y_batch.shape)
+#     component_holder['train_gen_wb'] = w_batch
+#
+# @pytest.mark.dependency(depends=['TestPreprocessor::test_train_gen_out'])
+# def test_train_gen_x_shape(self, run_config, component_holder):
+#     batch_size = int(run_config.batch_size)
+#     input_h = int(run_config.input_height)
+#     input_w = int(run_config.input_width)
+#     x_b_shape = component_holder['train_gen_xb_shape']
+#
+#     assert tuple(x_b_shape)[:3] == (batch_size, input_h, input_w)
+#     component_holder['input_channels'] = tuple(x_b_shape)[-1]
+#
+# @pytest.mark.dependency(depends=['TestPreprocessor::test_train_gen_out'])
+# def test_train_gen_y_batch_size(self, run_config, component_holder):
+#     assert component_holder['train_gen_yb_shape'][0] == int(run_config.batch_size)
+#
+# @pytest.mark.dependency(depends=['TestPreprocessor::test_train_gen_out'])
+# def test_train_gen_w_batch_size(self, run_config, component_holder):
+#     w_batch = component_holder['train_gen_wb']
+#     assert len(w_batch) == int(run_config.batch_size)
+#
+# @pytest.mark.dependency(depends=['TestPreprocessor::test_train_gen_out'])
+# def test_train_gen_w_is_iterable(self, run_config, component_holder):
+#     w_batch = component_holder['train_gen_wb']
+#     assert hasattr(w_batch[0],
+#                    '__iter__'), 'elements of the weights_batch are not iterables, add a new axis to each element.'
+#
+# # ---------- Validation Preprocessing ----------
+# @pytest.mark.dependency(depends=['TestAugmentor::test_add_validation_augmentation'])
+# def test_add_validation_preprocessing(self, run_config, component_holder):
+#     preprocessor = component_holder['preprocessor']
+#     data_gen = component_holder['validation_data_gen']
+#     n = component_holder['validation_n']
+#
+#     ret = preprocessor.add_preprocess(data_gen, n)
+#     assert len(ret) == 2
+#
+#     gen, n_iter = ret
+#     component_holder['validation_data_gen'] = gen
+#     component_holder['n_iter_validation'] = n_iter
+#
+# @pytest.mark.dependency(depends=['TestPreprocessor::test_add_validation_preprocessing'])
+# def test_validation_preprocess_generator(self, run_config, component_holder):
+#     assert hasattr(component_holder['validation_data_gen'], '__iter__')
+#
+# @pytest.mark.dependency(depends=['TestPreprocessor::test_add_validation_preprocessing'])
+# def test_validation_preprocess_n_iter(self, run_config, component_holder):
+#     assert isinstance(component_holder['n_iter_validation'], int)
+#
+# @pytest.mark.dependency(depends=['TestPreprocessor::test_validation_preprocess_generator'])
+# def test_validation_gen_out(self, run_config, component_holder):
+#     gen = component_holder['validation_data_gen']
+#     ret = next(iter(gen))
+#     assert len(ret) == 3
+#
+#     x_batch, y_batch, w_batch = ret
+#     component_holder['validation_gen_xb_shape'] = tuple(x_batch.shape)
+#     component_holder['validation_gen_yb_shape'] = tuple(y_batch.shape)
+#     component_holder['validation_gen_wb'] = w_batch
+#
+# @pytest.mark.dependency(depends=['TestPreprocessor::test_validation_gen_out'])
+# def test_validation_gen_x_shape(self, run_config, component_holder):
+#     batch_size = int(run_config.batch_size)
+#     input_h = int(run_config.input_height)
+#     input_w = int(run_config.input_width)
+#     x_b_shape = component_holder['validation_gen_xb_shape']
+#
+#     assert tuple(x_b_shape)[:3] == (batch_size, input_h, input_w)
+#     component_holder['input_channels_validation'] = tuple(x_b_shape)[-1]
+#
+# @pytest.mark.dependency(depends=['TestPreprocessor::test_validation_gen_out'])
+# def test_validation_gen_y_batch_size(self, run_config, component_holder):
+#     assert component_holder['validation_gen_yb_shape'][0] == int(run_config.batch_size)
+#
+# @pytest.mark.dependency(depends=['TestPreprocessor::test_validation_gen_out'])
+# def test_validation_gen_w_batch_size(self, run_config, component_holder):
+#     w_batch = component_holder['validation_gen_wb']
+#     assert len(w_batch) == int(run_config.batch_size)
+#
+# @pytest.mark.dependency(depends=['TestPreprocessor::test_validation_gen_out'])
+# def test_validation_gen_w_is_iterable(self, run_config, component_holder):
+#     w_batch = component_holder['validation_gen_wb']
+#     assert hasattr(w_batch[0],
+#                    '__iter__'), 'elements of the weights_batch are not iterables, add a new axis to each element.'
+#
+# # ---------- Evaluation Preprocessing ----------
+# @pytest.mark.dependency(depends=['TestDataLoader::test_evaluation_generator'])
+# def test_add_evaluation_preprocessing(self, run_config, component_holder):
+#     preprocessor = component_holder['preprocessor']
+#     data_gen = component_holder['evaluation_data_gen']
+#     n = component_holder['evaluation_n']
+#
+#     ret = preprocessor.add_preprocess(data_gen, n)
+#     assert len(ret) == 2
+#
+#     gen, n_iter = ret
+#     component_holder['evaluation_data_gen'] = gen
+#     component_holder['n_iter_evaluation'] = n_iter
+#
+# @pytest.mark.dependency(depends=['TestPreprocessor::test_add_evaluation_preprocessing'])
+# def test_evaluation_preprocess_generator(self, run_config, component_holder):
+#     assert hasattr(component_holder['evaluation_data_gen'], '__iter__')
+#
+# @pytest.mark.dependency(depends=['TestPreprocessor::test_add_evaluation_preprocessing'])
+# def test_evaluation_preprocess_n_iter(self, run_config, component_holder):
+#     assert isinstance(component_holder['n_iter_evaluation'], int)
+#
+# @pytest.mark.dependency(depends=['TestPreprocessor::test_evaluation_preprocess_generator'])
+# def test_evaluation_gen_out(self, run_config, component_holder):
+#     gen = component_holder['evaluation_data_gen']
+#     ret = next(iter(gen))
+#     assert len(ret) == 3
+#
+#     x_batch, y_batch, w_batch = ret
+#     component_holder['evaluation_gen_xb_shape'] = tuple(x_batch.shape)
+#     component_holder['evaluation_gen_yb_shape'] = tuple(y_batch.shape)
+#     component_holder['evaluation_gen_id'] = w_batch
+#
+# @pytest.mark.dependency(depends=['TestPreprocessor::test_evaluation_gen_out'])
+# def test_evaluation_gen_x_shape(self, run_config, component_holder):
+#     batch_size = int(run_config.batch_size)
+#     input_h = int(run_config.input_height)
+#     input_w = int(run_config.input_width)
+#     x_b_shape = component_holder['evaluation_gen_xb_shape']
+#
+#     assert tuple(x_b_shape)[:3] == (batch_size, input_h, input_w)
+#     component_holder['input_channels_evaluation'] = tuple(x_b_shape)[-1]
+#
+# @pytest.mark.dependency(depends=['TestPreprocessor::test_evaluation_gen_out'])
+# def test_evaluation_gen_y_batch_size(self, run_config, component_holder):
+#     assert component_holder['evaluation_gen_yb_shape'][0] == int(run_config.batch_size)
+#
+# @pytest.mark.dependency(depends=['TestPreprocessor::test_evaluation_gen_out'])
+# def test_evaluation_gen_w_batch_size(self, run_config, component_holder):
+#     id_batch = component_holder['evaluation_gen_id']
+#     assert len(id_batch) == int(run_config.batch_size)
 
-        component_holder['training_history'] = history.history
-        component_holder['initial_training_loss'] = initial_tr_loss
-        component_holder['initial_validation_loss'] = initial_val_loss
+# @pytest.mark.dependency(depends=['TestPreprocessor::test_evaluation_gen_out'])
+# def test_evaluation_gen_w_is_iterable(self, run_config, component_holder):
+#     w_batch = component_holder['evaluation_gen_wb']
+#     assert hasattr(w_batch[0],
+#                    '__iter__'), 'elements of the weights_batch are not iterables, add a new axis to each element.'
 
-    @pytest.mark.dependency(depends=['TestTraining::test_model_training'])
-    def test_model_loss_is_decreasing(self, component_holder):
-        model_loss = component_holder['training_history']['loss']
-        assert model_loss[-1] < model_loss[0]
 
-    @pytest.mark.dependency(depends=['TestTraining::test_model_training'])
-    def test_model_val_loss_is_decreasing(self, component_holder):
-        model_loss = component_holder['training_history']['val_loss']
-        assert model_loss[-1] < model_loss[0]
+# @pytest.mark.modelbuilder
+# class TestModelBuilder(TestPreprocessor):
+#
+#     @pytest.mark.dependency(depends=['TestPreprocessor::test_train_preprocess_generator'])
+#     def test_get_compiled_model(self, run_config, component_holder):
+#         model_builder = component_holder['model_builder']
+#         compiled_model = model_builder.get_compiled_model()
+#         assert True
+#
+#         component_holder['compiled_model'] = compiled_model
+#
+#     @pytest.mark.dependency(depends=['TestModelBuilder::test_get_compiled_model',
+#                                      'TestPreprocessor::test_train_preprocess_generator', ])
+#     def test_model_train_gen_compatibility(self, run_config, component_holder):
+#         compiled_model = component_holder['compiled_model']
+#         _, input_h, input_w, n_channels = compiled_model.input_shape
+#
+#         train_gen = component_holder['train_data_gen']
+#         x_b, y_b, w_b = next(iter(train_gen))
+#
+#         compiled_model.evaluate(x=x_b, y=y_b, sample_weight=w_b)
+#         assert True
+#
+#         # assert input_h == int(run_config.input_height)
+#         # assert input_w == int(run_config.input_width)
+#         # assert n_channels == int(component_holder['input_channels'])
+#
+#     @pytest.mark.dependency(depends=['TestModelBuilder::test_get_compiled_model',
+#                                      'TestPreprocessor::test_validation_preprocess_generator', ])
+#     def test_model_validation_gen_compatibility(self, run_config, component_holder):
+#         compiled_model = component_holder['compiled_model']
+#         _, input_h, input_w, n_channels = compiled_model.input_shape
+#
+#         gen = component_holder['validation_data_gen']
+#         x_b, y_b, w_b = next(iter(gen))
+#
+#         compiled_model.evaluate(x=x_b, y=y_b, sample_weight=w_b)
+#         assert True
+#
+#         # assert input_h == int(run_config.input_height)
+#         # assert input_w == int(run_config.input_width)
+#         # assert n_channels == int(component_holder['input_channels'])
+#
+#
+# @pytest.mark.component
+# class TestEvaluation:
+#
+#     @pytest.mark.dependency(depends=['TestInitializeComponents::test_initialize_evaluator',
+#                                      'TestPreprocessor::test_evaluation_gen_out'])
+#     def test_eval_funcs(self, component_holder):
+#         evaluator = component_holder['evaluator']
+#         eval_funcs = evaluator.get_eval_funcs()
+#
+#         compiled_model = component_holder['compiled_model']
+#         data_gen = component_holder['evaluation_data_gen']
+#         x_b, y_b, _ = next(iter(data_gen))
+#         x_sample = x_b[0]
+#         y_sample = y_b[0]
+#         y_pred = compiled_model.predict(np.expand_dims(x_sample, axis=0))[0]
+#
+#         failed_funcs = list()
+#         for f_name, f in eval_funcs.items():
+#             if not (isinstance(f_name, str) or isinstance(f, FunctionType)):
+#                 failed_funcs.append(f_name)
+#             else:
+#                 try:
+#                     f(y_sample, y_pred)
+#                 except Exception as e:
+#                     failed_funcs.append(f_name)
+#
+#         if any(failed_funcs):
+#             pytest.fail(f'failed {len(failed_funcs)}/{len(eval_funcs)}. failed funcs are {failed_funcs}')
+#
+#
+# @pytest.mark.component
+# class TestTraining:
+#
+#     @pytest.mark.dependency(depends=['TestEvaluation::test_eval_funcs'])
+#     def test_model_training(self, run_config, component_holder):
+#         """Simple model fit, with 3 batches per epoch, for 3 epochs."""
+#
+#         model = component_holder['compiled_model']
+#         train_gen = component_holder['train_data_gen']
+#         val_gen = component_holder['validation_data_gen']
+#
+#         x_tr, y_tr, w_tr = next(iter(train_gen))
+#         x_val, y_val, w_val = next(iter(val_gen))
+#
+#         initial_tr_loss = model.evaluate(x_tr, y_tr, sample_weight=w_tr, return_dict=True)['loss']
+#         initial_val_loss = model.evaluate(x_val, y_val, sample_weight=w_val, return_dict=True)['loss']
+#
+#         epochs = 3
+#
+#         history = model.fit(x_tr,
+#                             y_tr,
+#                             epochs=epochs,
+#                             sample_weight=w_tr,
+#                             validation_data=(x_val, y_val, w_val))
+#         assert True
+#
+#         component_holder['training_history'] = history.history
+#         component_holder['initial_training_loss'] = initial_tr_loss
+#         component_holder['initial_validation_loss'] = initial_val_loss
+#
+#     @pytest.mark.dependency(depends=['TestTraining::test_model_training'])
+#     def test_model_loss_is_decreasing(self, component_holder):
+#         model_loss = component_holder['training_history']['loss']
+#         assert model_loss[-1] < model_loss[0]
+#
+#     @pytest.mark.dependency(depends=['TestTraining::test_model_training'])
+#     def test_model_val_loss_is_decreasing(self, component_holder):
+#         model_loss = component_holder['training_history']['val_loss']
+#         assert model_loss[-1] < model_loss[0]
 
 # import pytest
 # from pathlib import Path
