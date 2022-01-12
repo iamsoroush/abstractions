@@ -134,7 +134,7 @@ class TestDataLoader:
                 mode=["bold", "underline"])
         except Exception as e:
             raise Exception(color_str(
-                "Error in evaluation generation", "red",
+                f"Error in evaluation generation, {e}", "red",
                 mode=["bold", "underline"]))
         evaluation_data_gen, evaluation_n = ret
         component_holder['evaluation_data_gen'] = evaluation_data_gen
@@ -152,7 +152,38 @@ class TestDataLoader:
     def test_evaluation_gen_out(self, component_holder):
         gen = component_holder['evaluation_data_gen']
         ret = next(iter(gen))
-        assert len(ret) == 3
+        assert len(
+            ret) == 3, color_str(
+            f"Generator returns two components. Ignore this message if you don't have weights for your samples",
+            "yellow", mode="bold") if len(
+            ret) == 2 else color_str("Generator does not return a proper number of outputs!", "red",
+                                     mode=["bold", "underline"])
+
+
+@pytest.mark.model
+class TestModel:
+    def test_locate_model_builder_class(self, run_config, component_holder):
+        """Whether package can locate model_builder_class"""
+
+        model_builder_class = locate(run_config.model_builder_class)
+        assert model_builder_class is not None
+        component_holder['model_builder_class'] = model_builder_class
+
+    @pytest.mark.dependency(depends=['TestModel::test_locate_model_builder_class'])
+    def test_initialize_model_builder(self, run_config, component_holder):
+        """Whether model_builder could be initialized correctly."""
+
+        model_builder = component_holder.get('model_builder_class')(run_config)
+        assert isinstance(model_builder, ModelBuilderBase)
+        component_holder['model_builder'] = model_builder
+
+    # @pytest.mark.dependency(depends=['TestPreprocessor::test_train_preprocess_generator'])
+    # def test_get_compiled_model(self, run_config, component_holder):
+    #     model_builder = component_holder['model_builder']
+    #     compiled_model = model_builder.get_compiled_model()
+    #     assert True
+    #
+    #     component_holder['compiled_model'] = compiled_model
 
 
 @pytest.mark.component
