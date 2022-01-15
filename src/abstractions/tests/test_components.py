@@ -6,7 +6,7 @@ component_holder: For testing different modules several components are needed.
 This variable stores outputs of previous tests up to that specific test to make upcoming tests possible.
 To be aware of the contents of component_holder, follow the dependencies of the current testing module.
 """
-
+import os.path
 import warnings
 import pytest
 from pathlib import Path
@@ -32,9 +32,14 @@ def run_config(pytestconfig):
     if config_path is None:
         run_name = pytestconfig.getoption('run_name')
         run_dir = Path('runs').joinpath(run_name)
-        config = load_config_file(list(run_dir.glob('*.yaml'))[0])
-    else:
+        yaml_files = list(run_dir.glob('*.yaml'))
+        if len(yaml_files) == 0:
+            raise ValueError(f"[ERROR] run-dir {run_dir} has not config.yaml file")
+        config = load_config_file(yaml_files[0])
+    elif os.path.isfile(config_path):
         config = load_config_file(config_path)
+    else:
+        raise ValueError(f"[ERROR] config-path {config_path} does not exist")
     return config
 
 
@@ -161,7 +166,7 @@ class TestDataLoader:
 
 
 @pytest.mark.augmentation
-class TestAugmentor(TestDataLoader):
+class TestAugmentor:
     def test_locate_augmentor_class(self, run_config, component_holder):
         if not hasattr(run_config, 'augmentor_class') or run_config.augmentor_class is None:
             assert True
@@ -239,7 +244,7 @@ class TestAugmentor(TestDataLoader):
 
 
 @pytest.mark.preprocessor
-class TestPreprocessor(TestAugmentor):
+class TestPreprocessor:
     def test_locate_preprocessor_class(self, run_config, component_holder):
         """if package can locate preprocessor_class"""
 
