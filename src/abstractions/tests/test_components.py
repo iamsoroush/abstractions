@@ -83,17 +83,24 @@ class TestDataLoader:
     def test_train_generator(self, run_config, component_holder):
         assert isinstance(component_holder['train_n'], int)
 
+    # @pytest.mark.dependency(depends=['TestDataLoader::test_train_generator'])
+    # def test_train_gen_out(self, component_holder):
+    #     """Checks train generator's number of outputs"""
+    #     gen = component_holder['train_data_gen']
+    #     ret = next(iter(gen))
+    #     assert len(
+    #         ret) == 3, color_str(
+    #         f"Generator returns two components. Ignore this message if you don't have weights for your samples",
+    #         "yellow", mode="bold") if len(
+    #         ret) == 2 else color_str("Generator does not return a proper number of outputs!", "red",
+    #                                  mode=["bold", "underline"])
+
     @pytest.mark.dependency(depends=['TestDataLoader::test_train_generator'])
-    def test_train_gen_out(self, component_holder):
-        """Checks train generator's number of outputs"""
-        gen = component_holder['train_data_gen']
-        ret = next(iter(gen))
-        assert len(
-            ret) == 3, color_str(
-            f"Generator returns two components. Ignore this message if you don't have weights for your samples",
-            "yellow", mode="bold") if len(
-            ret) == 2 else color_str("Generator does not return a proper number of outputs!", "red",
-                                     mode=["bold", "underline"])
+    def test_train_gen_out(self, run_config, component_holder):
+        train_gen = component_holder['train_data_gen']
+        ret = next(iter(train_gen))
+        assert 2 <= len(ret) < 4, color_str(f"Generator does not return a proper number of outputs, {len(ret)}!", "red",
+                                            mode=["bold", "underline"])
 
     # ---------- Validation Data ----------
     @pytest.mark.dependency(depends=['TestDataLoader::test_initialize_data_loader'])
@@ -120,12 +127,8 @@ class TestDataLoader:
     def test_validation_gen_out(self, component_holder):
         gen = component_holder['validation_data_gen']
         ret = next(iter(gen))
-        assert len(
-            ret) == 3, color_str(
-            f"Generator returns two components. Ignore this message if you don't have weights for your samples",
-            "yellow", mode="bold") if len(
-            ret) == 2 else color_str("Generator does not return a proper number of outputs!", "red",
-                                     mode=["bold", "underline"])
+        assert 2 <= len(ret) < 4, color_str(f"Generator does not return a proper number of outputs, {len(ret)}!", "red",
+                                            mode=["bold", "underline"])
 
     # ---------- Test Data ----------
     @pytest.mark.dependency(depends=['TestDataLoader::test_initialize_data_loader'])
@@ -157,16 +160,13 @@ class TestDataLoader:
     def test_evaluation_gen_out(self, component_holder):
         gen = component_holder['evaluation_data_gen']
         ret = next(iter(gen))
-        assert len(
-            ret) == 3, color_str(
-            f"Generator returns two components. Ignore this message if you don't have weights for your samples",
-            "yellow", mode="bold") if len(
-            ret) == 2 else color_str("Generator does not return a proper number of outputs!", "red",
-                                     mode=["bold", "underline"])
+        assert 2 <= len(ret) < 4, color_str(f"Generator does not return a proper number of outputs, {len(ret)}!", "red",
+                                            mode=["bold", "underline"])
 
 
 @pytest.mark.augmentation
 class TestAugmentor:
+    @pytest.mark.dependency()
     def test_locate_augmentor_class(self, run_config, component_holder):
         if not hasattr(run_config, 'augmentor_class') or run_config.augmentor_class is None:
             assert True
@@ -203,12 +203,9 @@ class TestAugmentor:
         try:
             train_data_gen = component_holder['train_data_gen']
             ret = next(iter(train_data_gen))
-            assert len(
-                ret) == 3, color_str(
-                f"Generator returns two components. Ignore this message if you don't have weights for your samples",
-                "yellow", mode="bold") if len(
-                ret) == 2 else color_str("Generator does not return a proper number of outputs!", "red",
-                                         mode=["bold", "underline"])
+            assert 2 <= len(ret) < 4, color_str(f"Generator does not return a proper number of outputs, {len(ret)}!",
+                                                "red",
+                                                mode=["bold", "underline"])
         except Exception as e:
             raise Exception(color_str(
                 f"Error {e}, If you don't have augmentor class ignore this message", "yellow",
@@ -231,12 +228,9 @@ class TestAugmentor:
         try:
             data_gen = component_holder['validation_data_gen']
             ret = next(iter(data_gen))
-            assert len(
-                ret) == 3, color_str(
-                f"Generator returns two components. Ignore this message if you don't have weights for your samples",
-                "yellow", mode="bold") if len(
-                ret) == 2 else color_str("Generator does not return a proper number of outputs!", "red",
-                                         mode=["bold", "underline"])
+            assert 2 <= len(ret) < 4, color_str(f"Generator does not return a proper number of outputs, {len(ret)}!",
+                                                "red",
+                                                mode=["bold", "underline"])
         except Exception as e:
             raise Exception(color_str(
                 f"Error {e}, If you don't have augmentor class ignore this message", "yellow",
@@ -245,6 +239,7 @@ class TestAugmentor:
 
 @pytest.mark.preprocessor
 class TestPreprocessor:
+    @pytest.mark.dependency()
     def test_locate_preprocessor_class(self, run_config, component_holder):
         """if package can locate preprocessor_class"""
 
@@ -298,6 +293,7 @@ class TestPreprocessor:
             x_batch, y_batch = ret
             component_holder['train_gen_xb_shape'] = tuple(x_batch.shape)
             component_holder['train_gen_yb_shape'] = tuple(y_batch.shape)
+            component_holder['train_gen_wb'] = None
 
     @pytest.mark.dependency(depends=['TestPreprocessor::test_train_gen_out'])
     def test_train_gen_x_shape(self, run_config, component_holder):
@@ -317,7 +313,8 @@ class TestPreprocessor:
     def test_train_gen_w_batch_size(self, run_config, component_holder):
         try:
             w_batch = component_holder['train_gen_wb']
-            assert len(w_batch) == int(run_config.batch_size)
+            if w_batch is not None:
+                assert len(w_batch) == int(run_config.batch_size)
         except Exception as e:
             raise Exception(color_str(
                 f"Error {e}, If you don't have weights for your samples, ignore this message", "yellow",
@@ -327,9 +324,10 @@ class TestPreprocessor:
     def test_train_gen_w_is_iterable(self, run_config, component_holder):
         try:
             w_batch = component_holder['train_gen_wb']
-            assert hasattr(w_batch[0], '__iter__'), color_str(
-                "Elements of the weights_batch are not iterables, add a new axis to each element.",
-                "yellow", mode=["bold"])
+            if w_batch is not None:
+                assert hasattr(w_batch[0], '__iter__'), color_str(
+                    "Elements of the weights_batch are not iterables, add a new axis to each element.",
+                    "yellow", mode=["bold"])
         except Exception as e:
             raise Exception(color_str(
                 f"Error {e}, If you don't have weights for your samples, ignore this message", "yellow",
@@ -372,6 +370,7 @@ class TestPreprocessor:
             x_batch, y_batch = ret
             component_holder['validation_gen_xb_shape'] = tuple(x_batch.shape)
             component_holder['validation_gen_yb_shape'] = tuple(y_batch.shape)
+            component_holder['validation_gen_wb'] = None
 
     @pytest.mark.dependency(depends=['TestPreprocessor::test_validation_gen_out'])
     def test_validation_gen_x_shape(self, run_config, component_holder):
@@ -391,7 +390,8 @@ class TestPreprocessor:
     def test_validation_gen_w_batch_size(self, run_config, component_holder):
         try:
             w_batch = component_holder['validation_gen_wb']
-            assert len(w_batch) == int(run_config.batch_size)
+            if w_batch is not None:
+                assert len(w_batch) == int(run_config.batch_size)
         except Exception as e:
             raise Exception(color_str(
                 f"Error {e}, If you don't have weights for your samples, ignore this message", "yellow",
@@ -401,7 +401,8 @@ class TestPreprocessor:
     def test_validation_gen_w_is_iterable(self, run_config, component_holder):
         try:
             w_batch = component_holder['validation_gen_wb']
-            assert hasattr(w_batch[0], '__iter__'), color_str(
+            if w_batch is not None:
+                assert hasattr(w_batch[0], '__iter__'), color_str(
                 "Elements of the weights_batch are not iterables, add a new axis to each element.",
                 "yellow", mode=["bold"])
         except Exception as e:
@@ -417,7 +418,10 @@ class TestPreprocessor:
         n = component_holder['evaluation_n']
 
         ret = preprocessor.add_preprocess(data_gen, n)
-        assert len(ret) == 2
+        assert len(ret) == 2, color_str(
+                f"Error, evaluation should return two objects, a data-generator and the number of iterations", "red",
+                mode=["bold"])
+
 
         gen, n_iter = ret
         component_holder['evaluation_data_gen'] = gen
@@ -435,29 +439,30 @@ class TestPreprocessor:
     def test_evaluation_gen_out(self, run_config, component_holder):
         gen = component_holder['evaluation_data_gen']
         ret = next(iter(gen))
-        assert 2 <= len(ret) < 4, color_str("Generator does not return a proper number of outputs!", "red",
+        assert 2 <= len(ret) < 4, color_str(f"Generator does not return a proper number of outputs! {len(ret)}", "red",
                                             mode=["bold", "underline"])
         if len(ret) == 3:
-            x_batch, y_batch, w_batch = ret
+            x_batch, y_batch, data_id = ret
             component_holder['evaluation_gen_xb_shape'] = tuple(x_batch.shape)
             component_holder['evaluation_gen_yb_shape'] = tuple(y_batch.shape)
-            component_holder['evaluation_gen_wb'] = w_batch
+            component_holder['evaluation_gen_id'] = data_id
         else:
             x_batch, y_batch = ret
             component_holder['evaluation_gen_xb_shape'] = tuple(x_batch.shape)
             component_holder['evaluation_gen_yb_shape'] = tuple(y_batch.shape)
+            component_holder['evaluation_gen_id'] = None
 
-    @pytest.mark.dependency(depends=['TestPreprocessor::test_evaluation_gen_out'])
-    def test_evaluation_gen_w_is_iterable(self, run_config, component_holder):
-        try:
-            w_batch = component_holder['evaluation_gen_wb']
-            assert hasattr(w_batch[0], '__iter__'), color_str(
-                "Elements of the weights_batch are not iterables, add a new axis to each element.",
-                "yellow", mode=["bold"])
-        except Exception as e:
-            raise Exception(color_str(
-                f"Error {e}, If you don't have weights for your samples, ignore this message", "yellow",
-                mode=["bold"]))
+    # @pytest.mark.dependency(depends=['TestPreprocessor::test_evaluation_gen_out'])
+    # def test_evaluation_gen_w_is_iterable(self, run_config, component_holder):
+    #     try:
+    #         w_batch = component_holder['evaluation_gen_wb']
+    #         assert hasattr(w_batch[0], '__iter__'), color_str(
+    #             "Elements of the weights_batch are not iterables, add a new axis to each element.",
+    #             "yellow", mode=["bold"])
+    #     except Exception as e:
+    #         raise Exception(color_str(
+    #             f"Error {e}, If you don't have weights for your samples, ignore this message", "yellow",
+    #             mode=["bold"]))
 
     @pytest.mark.dependency(depends=['TestPreprocessor::test_evaluation_gen_out'])
     def test_evaluation_gen_x_shape(self, run_config, component_holder):
@@ -473,19 +478,20 @@ class TestPreprocessor:
     def test_evaluation_gen_y_batch_size(self, run_config, component_holder):
         assert component_holder['evaluation_gen_yb_shape'][0] == int(run_config.batch_size)
 
-    @pytest.mark.dependency(depends=['TestPreprocessor::test_evaluation_gen_out'])
-    def test_evaluation_gen_w_batch_size(self, run_config, component_holder):
-        try:
-            id_batch = component_holder['evaluation_gen_wb']
-            assert len(id_batch) == int(run_config.batch_size)
-        except Exception as e:
-            raise Exception(color_str(
-                f"Error {e}, If you don't have weights for your samples, ignore this message", "yellow",
-                mode=["bold"]))
+    # @pytest.mark.dependency(depends=['TestPreprocessor::test_evaluation_gen_out'])
+    # def test_evaluation_gen_w_batch_size(self, run_config, component_holder):
+    #     try:
+    #         id_batch = component_holder['evaluation_gen_id']
+    #         assert len(id_batch) == int(run_config.batch_size)
+    #     except Exception as e:
+    #         raise Exception(color_str(
+    #             f"Error {e}, If you don't have weights for your samples, ignore this message", "yellow",
+    #             mode=["bold"]))
 
 
 @pytest.mark.model
 class TestModel:
+    @pytest.mark.dependency()
     def test_locate_model_builder_class(self, run_config, component_holder):
         """Whether package can locate model_builder_class"""
 
