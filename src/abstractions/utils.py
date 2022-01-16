@@ -155,7 +155,7 @@ class ConfigStruct:
         self.seed = 101
         self.input_height = None
         self.input_width = None
-        self.input_channel = None
+        self.input_channels = None
         self.src_code_path = None
         self.data_dir = None
         self.data_loader_class = None
