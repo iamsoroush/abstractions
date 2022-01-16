@@ -8,13 +8,15 @@ To be aware of the contents of component_holder, follow the dependencies of the 
 """
 import os.path
 import warnings
+from types import FunctionType
+import numpy as np
 import pytest
 from pathlib import Path
 from pydoc import locate
-import tensorflow as tf
 from abstractions.utils import load_config_file
 from abstractions import DataLoaderBase, AugmentorBase, PreprocessorBase, ModelBuilderBase, EvaluatorBase
 from deep_utils import color_str
+import tensorflow as tf
 
 warnings.filterwarnings('ignore')
 
@@ -553,3 +555,199 @@ class TestModel:
             raise ValueError(color_str(
                 f"Generator does not return a proper number of outputs", "red",
                 mode=["bold", "underline"]))
+
+
+@pytest.mark.component
+class TestTraining:
+
+    @pytest.mark.dependency(depends=['TestModelBuilder::test_model_train_gen_compatibility',
+                                     'TestModelBuilder::test_model_validation_gen_compatibility'])
+    def test_model_training(self, run_config, component_holder):
+        """Simple model fit, with 3 batches per epoch, for 3 epochs."""
+
+        model = component_holder['compiled_model']
+        train_gen = component_holder['train_data_gen']
+        val_gen = component_holder['validation_data_gen']
+
+        x_tr, y_tr, w_tr = next(iter(train_gen))
+        x_val, y_val, w_val = next(iter(val_gen))
+
+        initial_tr_loss = model.evaluate(x_tr, y_tr, sample_weight=w_tr, return_dict=True)['loss']
+        initial_val_loss = model.evaluate(x_val, y_val, sample_weight=w_val, return_dict=True)['loss']
+        # train_iter = 3  # component_holder['n_iter_train']
+        # val_iter = 3  # component_holder['n_iter_validation']
+
+        epochs = 3
+
+        history = model.fit(x_tr,
+                            y_tr,
+                            epochs=epochs,
+                            sample_weight=w_tr,
+                            validation_data=(x_val, y_val, w_val))
+        assert True
+
+        component_holder['training_history'] = history.history
+        component_holder['initial_training_loss'] = initial_tr_loss
+        component_holder['initial_validation_loss'] = initial_val_loss
+
+    @pytest.mark.dependency(depends=['TestTraining::test_model_training'])
+    def test_model_loss_is_decreasing(self, component_holder):
+        model_loss = component_holder['training_history']['loss']
+        assert model_loss[-1] < model_loss[0]
+
+    @pytest.mark.dependency(depends=['TestTraining::test_model_training'])
+    def test_model_val_loss_is_decreasing(self, component_holder):
+        model_loss = component_holder['training_history']['val_loss']
+        assert model_loss[-1] < model_loss[0]
+
+
+@pytest.mark.evaluation
+class TestEvaluation:
+    @pytest.mark.dependency()
+    def test_locate_evaluator_class(self, run_config, component_holder):
+        evaluator_class = locate(run_config.evaluator_class)
+        assert evaluator_class is not None
+        component_holder['evaluator_class'] = evaluator_class
+
+    @pytest.mark.dependency(depends=['TestEvaluation::test_locate_evaluator_class'])
+    def test_initialize_evaluator(self, run_config, component_holder):
+        evaluator = component_holder.get('evaluator_class')()
+        assert isinstance(evaluator, EvaluatorBase)
+        component_holder['evaluator'] = evaluator
+
+    @pytest.mark.dependency(depends=['TestPreprocessor::test_validation_gen_out'])
+    def test_validation_data_gen(self, component_holder):
+        data_loader = component_holder['data_loader']
+        preprocessor = component_holder['preprocessor']
+
+        val_data_gen, val_n = data_loader.create_validation_generator()
+        val_data_gen = preprocessor.add_image_preprocess(val_data_gen)
+        val_data_gen = preprocessor.add_label_preprocess(val_data_gen)
+        sample = next(iter(val_data_gen))
+
+        assert 2 <= len(sample) < 4, color_str(f"Generator does not return a proper number of outputs!, {len(sample)}",
+                                               "red",
+                                               mode=["bold", "underline"])
+
+        component_holder['evaluation_val_data_gen'] = val_data_gen
+        component_holder['validation_sample'] = sample
+
+    @pytest.mark.dependency(depends=['TestPreprocessor::test_evaluation_gen_out'])
+    def test_evaluation_data_gen(self, run_config, component_holder):
+        data_loader = component_holder['data_loader']
+        preprocessor = component_holder['preprocessor']
+
+        data_gen, val_n = data_loader.create_test_generator()
+        data_gen = preprocessor.add_image_preprocess(data_gen)
+        data_gen = preprocessor.add_label_preprocess(data_gen)
+        sample = next(iter(data_gen))
+
+        assert len(sample) == 3, color_str(
+            f"Generator does not return a proper number of outputs! {len(sample)}, ids are mandetory for evaluation generator, you can pass your image paths as ids",
+            "red",
+            mode=["bold", "underline"])
+
+        x_sample, y_sample, w_sample = sample
+        proper_shape = (
+            run_config.batch_size, run_config.input_width, run_config.input_height, run_config.input_channels)
+        assert x_sample.shape == proper_shape, color_str(
+            f"Generator does not return a proper sample. Shape is: {x_sample.shape} while it should be {proper_shape}",
+            "red", mode=["bold", "underline"])
+        component_holder['evaluation_eval_data_gen'] = data_gen
+        component_holder['evaluation_sample'] = sample
+
+    @pytest.mark.dependency(depends=['TestEvaluation::test_initialize_evaluator',
+                                     'TestEvaluation::test_validation_data_gen'])
+    def test_eval_funcs_on_validation_gen(self, run_config, component_holder):
+        evaluator = component_holder['evaluator']
+        eval_funcs = evaluator.get_eval_funcs()
+
+        compiled_model = component_holder['compiled_model']
+        sample = component_holder['validation_sample']
+
+        if len(sample) == 2:
+            x_sample, y_sample = sample
+        elif len(sample) == 3:
+            x_sample, y_sample, w_sample = sample
+        else:
+            raise Exception(color_str(f"Generator does not return a proper number of outputs!, {len(sample)}", "red",
+                                      mode=["bold", "underline"]))
+        y_pred = compiled_model.predict(x_sample)
+        failed_funcs = list()
+        for eval_func in eval_funcs:
+            f_name = eval_func.name
+            f = eval_func.get_func()
+            if not isinstance(f_name, str):
+                failed_funcs.append(f'{f_name}: name is not str')
+            elif not isinstance(f, FunctionType):
+                failed_funcs.append(f'{f_name}: function is not a FunctionType')
+            else:
+                try:
+                    f(y_sample, y_pred)
+                except Exception as e:
+                    failed_funcs.append(f'{f_name}: error in calculations: {e.args[0]}')
+
+        if any(failed_funcs):
+            pytest.fail(f'failed {len(failed_funcs)}/{len(eval_funcs)}. failed funcs are {failed_funcs}')
+
+    @pytest.mark.dependency(depends=['TestEvaluation::test_initialize_evaluator',
+                                     'TestEvaluation::test_evaluation_data_gen'])
+    def test_eval_funcs_on_evaluation_gen(self, run_config, component_holder):
+        evaluator = component_holder['evaluator']
+        eval_funcs = evaluator.get_eval_funcs()
+
+        compiled_model = component_holder['compiled_model']
+        x_sample, y_sample, w_sample = component_holder['evaluation_sample']
+        y_pred = compiled_model.predict(x_sample)
+
+        failed_funcs = list()
+        for eval_func in eval_funcs:
+            f_name = eval_func.name
+            f = eval_func.get_func()
+            if not isinstance(f_name, str):
+                failed_funcs.append(f'{f_name}: name is not str')
+            elif not isinstance(f, FunctionType):
+                failed_funcs.append(f'{f_name}: function is not a FunctionType')
+            else:
+                try:
+                    f(y_sample, y_pred)
+                except Exception as e:
+                    failed_funcs.append(f'{f_name}: error in calculations: {e.args[0]}')
+        if any(failed_funcs):
+            pytest.fail(f'failed {len(failed_funcs)}/{len(eval_funcs)}. failed funcs are {failed_funcs}')
+
+    # @pytest.mark.detailed_component
+    # @pytest.mark.dependency(depends=['TestInitializeComponents::test_initialize_evaluator',
+    #                                  'TestEvaluation::test_validation_data_gen'])
+    # def test_generate_eval_report_val_data(self, component_holder):
+    #     evaluator = component_holder['evaluator']
+    #     model = component_holder['compiled_model']
+    #     _ = evaluator._generate_eval_reports_val(component_holder['evaluation_val_data_gen'],
+    #                                              5,
+    #                                              model)
+    #
+    # @pytest.mark.detailed_component
+    # @pytest.mark.dependency(depends=['TestInitializeComponents::test_initialize_evaluator',
+    #                                  'TestEvaluation::test_evaluation_data_gen'])
+    # def test_generate_eval_report_eval_data(self, component_holder):
+    #     evaluator = component_holder['evaluator']
+    #     model = component_holder['compiled_model']
+    #     _ = evaluator._generate_eval_reports_test(component_holder['evaluation_eval_data_gen'],
+    #                                               5,
+    #                                               model)
+
+    # @pytest.mark.dependency(depends=['TestEvaluation::test_get_eval_funcs'])
+    # def test_eval_funcs(self, component_holder):
+    #     compiled_model = component_holder['compiled_model']
+    #     eval_funcs = component_holder['eval_funcs']
+    #     data_gen = component_holder['train_data_gen']
+    #     x_b, y_b, _ = next(iter(data_gen))
+    #     x_sample = x_b[0]
+    #     y_sample = y_b[0]
+    #     y_pred = compiled_model.predict(np.expand_dims(x_sample, axis=0))[0]
+    #
+    #     for f_name, f in eval_funcs.items():
+    #         try:
+    #             f(y_sample, y_pred)
+    #         except Exception as e:
+    #             pytest.fail(f'eval func {f_name} failed with exception {e}')
