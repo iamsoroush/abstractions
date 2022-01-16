@@ -1,1 +1,1 @@
-from .eval_base import EvalFunc, SegEvalFunc
+from .eval_base import EvalFunc, SegEvalFunc, ClsEvalFunc
