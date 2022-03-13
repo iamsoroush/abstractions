@@ -4,6 +4,7 @@ import logging
 import sys
 import mlflow
 from .abs_exceptions import ConfigNotFound, FoundMultipleConfigs
+from mlflow.exceptions import MlflowException
 
 
 def setup_mlflow(mlflow_tracking_uri, mlflow_experiment_name: str,
@@ -52,7 +53,11 @@ def setup_mlflow(mlflow_tracking_uri, mlflow_experiment_name: str,
         if experiment is not None:
             experiment_id = experiment.experiment_id
         else:
-            experiment_id = mlflow.create_experiment(mlflow_experiment_name)
+            try:
+                experiment_id = mlflow.create_experiment(mlflow_experiment_name)
+            except MlflowException as e:
+                logging.warning(f"mlflow-experiment is not found and can't be created, {e} setting experiment id to 0")
+                experiment_id = 0
 
         active_run = mlflow.start_run(experiment_id=experiment_id, run_name=run_name, nested=nested)
 
@@ -150,6 +155,7 @@ class ConfigStruct:
         self.seed = 101
         self.input_height = None
         self.input_width = None
+        self.input_channels = None
         self.src_code_path = None
         self.data_dir = None
         self.data_loader_class = None

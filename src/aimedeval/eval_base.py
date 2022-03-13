@@ -3,7 +3,6 @@ import typing
 
 
 class EvalFunc:
-
     """Rule: function's input and output must be ``np.ndarray``"""
 
     @property
@@ -20,6 +19,13 @@ class EvalFunc:
     @abstractmethod
     def get_func(self) -> typing.Callable:
         pass
+
+
+class ClsEvalFunc(EvalFunc):
+    """
+    Classification eval function class
+    """
+    pass
 
 
 class SegEvalFunc(EvalFunc):
